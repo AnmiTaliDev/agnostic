@@ -3,9 +3,7 @@ package novaria
 // NovariaOS System Library for Perano
 // Provides direct integration with NovariaOS syscalls and capabilities
 
-// ============================================================================
 // File System Operations
-// ============================================================================
 
 // Read a file from VFS
 // Returns: file size on success, -1 on error
@@ -36,9 +34,7 @@ pub fn FileDelete(filename int) int {
     return 0
 }
 
-// ============================================================================
 // Process Management
-// ============================================================================
 
 // Exit the current process with exit code
 pub fn Exit(code int) {
@@ -67,9 +63,7 @@ pub fn CapCheck(pid int, cap int) int {
     return 0
 }
 
-// ============================================================================
 // Inter-Process Communication
-// ============================================================================
 
 // Send a message to another process
 // Returns: 0 on success, -1 on error
@@ -85,9 +79,7 @@ pub fn MsgReceive(buffer int, maxsize int) int {
     return 0
 }
 
-// ============================================================================
 // Hardware Access (requires CAP_DRV_ACCESS)
-// ============================================================================
 
 // Read a byte from I/O port
 // Returns: byte value
@@ -102,9 +94,7 @@ pub fn PortOutByte(port int, value int) {
     return
 }
 
-// ============================================================================
 // Console/VGA Operations
-// ============================================================================
 
 // Print string to console using kprint
 pub fn Print(text int, color int) {
@@ -125,9 +115,7 @@ pub fn SetCursor(x int, y int) {
     return
 }
 
-// ============================================================================
 // Memory Operations
-// ============================================================================
 
 // Allocate memory block
 // Returns: pointer to allocated memory, 0 on failure
@@ -142,9 +130,7 @@ pub fn MemFree(ptr int) {
     return
 }
 
-// ============================================================================
 // Capability Constants
-// ============================================================================
 
 // Capability flags
 pub fn CAP_FS_READ() int {
@@ -175,9 +161,7 @@ pub fn CAP_ALL() int {
     return 65535
 }
 
-// ============================================================================
 // Utility Functions
-// ============================================================================
 
 // Get current process ID
 pub fn GetPID() int {
