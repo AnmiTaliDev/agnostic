@@ -1,6 +1,6 @@
 [package]
-name = "perano-lang"
-version = "0.4.0"
+name = "agnostic"
+version = "0.5.0"
 edition = "2021"
 
 [dependencies]
