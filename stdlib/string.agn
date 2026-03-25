@@ -1,7 +1,6 @@
 package string
 
 // String utilities library
-// Rust-style syntax
 
 // Get the length of a string
 pub fn len(s: string) -> int {
