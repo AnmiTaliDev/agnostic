@@ -1,19 +1,17 @@
 <div align="center" style="display:grid;place-items:center;">
-<p>
-    <a href="https://github.com/noxzion/perano-lang"><img width="80" src="https://github.com/z3nnix/perano-lang/blob/main/logo.png?raw=true" alt="Perano logo"></a>
-</p>
-<h1>The Perano Programming Language</h1>
-This repository contains the Perano compiler, Perano's standard library and tools.
+<h1>The Agnostic Programming Language</h1>
+Write Once, Run Anywhere.
 </div>
 <br>
 
+This repository contains the Agnostic compiler, standard library and tools.
+
 > [!IMPORTANT]
-> ~The current implementation of Perano is not final. It may be unstable and non-fully.~
-> Project is archived. Use [ncc](https://github.com/novariaos/ncc.git)
+> The original project has been archived and is no longer maintained. This is a fork of [Perano](https://github.com/noxzion/perano-lang)
 
 
 ### Examples
 
-📜 Examples can be found in the `examples/`[*](https://github.com/noxzion/perano-lang/tree/main/examples) directory.
+📜 Examples can be found in the `examples/`[*](https://github.com/AnmiTaliDev/agnostic/tree/main/examples) directory.
 
-Original author is [zennix](https://github.com/z3nnix/perano-lang)
+The original author are [zennix](https://github.com/z3nnix/) and [noxzion](https://github.com/noxzion/)
