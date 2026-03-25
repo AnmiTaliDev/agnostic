@@ -1,7 +1,6 @@
 package stdio
 
-// Standard I/O library for perano
-// Rust-style syntax
+// Standard I/O library for Agnostic
 
 // Print an integer without newline
 pub fn Print(value int) {
