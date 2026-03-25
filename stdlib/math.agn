@@ -1,6 +1,6 @@
 package math
 
-// Mathematical functions library for perano
+// Mathematical functions library for agnostic
 
 // Maximum of two numbers
 pub fn Max(a int, b int) int {
