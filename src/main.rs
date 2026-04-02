@@ -4,6 +4,7 @@ mod ast;
 mod elf;
 mod pe;
 mod nvm;
+mod llvm;
 mod error;
 mod typechecker;
 
@@ -17,7 +18,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        eprintln!("Usage: {} <source.per> [--elf|--nvm-code|--novaria|--pe-c]", args[0]);
+        eprintln!("Usage: {} <source.agn> [--llvm|--elf|--nvm-code|--novaria|--pe-asm]", args[0]);
         process::exit(1);
     }
 
@@ -64,78 +65,48 @@ fn main() {
 
     let target = if args.len() > 2 {
         match args[2].as_str() {
-            "--elf" => "elf",
+            "--llvm"     => "llvm",
+            "--elf"      => "elf",
             "--nvm-code" => "nvm-code",
-            "--novaria" => "novaria",
-            "--pe-asm" => "pe-asm",
+            "--novaria"  => "novaria",
+            "--pe-asm"   => "pe-asm",
             _ => {
                 eprintln!("Unknown target: {}", args[2]);
-                eprintln!("Valid targets: --elf, --nvm-code, --novaria, --pe-asm");
+                eprintln!("Valid targets: --llvm, --elf, --nvm-code, --novaria, --pe-asm");
                 process::exit(1);
             }
         }
-    } else if cfg!(target_os = "windows") {
-        "pe"
     } else {
-        "elf"
+        // LLVM is the default backend; ELF/PE are additional targets
+        "llvm"
     };
 
+    let stem = source_file
+        .trim_end_matches(".agn")
+        .trim_end_matches(".per");
+
     let output_file = match target {
-        "nvm-code" => {
-            if source_file.ends_with(".per") {
-                source_file.replace(".per", ".asm")
-            } else {
-                format!("{}.asm", source_file)
-            }
-        }
-        "novaria" => {
-            if source_file.ends_with(".per") {
-                source_file.replace(".per", ".bin")
-            } else {
-                format!("{}.bin", source_file)
-            }
-        }
-        "elf" => {
-            if source_file.ends_with(".per") {
-                source_file[..source_file.len()-4].to_string()
-            } else if source_file.ends_with(".nl") {
-                source_file[..source_file.len()-4].to_string()
-            } else {
-                source_file.to_string()
-            }
-        }
-        _ => {
-            if source_file.ends_with(".per") {
-                source_file.replace(".per", ".exe")
-            } else {
-                source_file.replace(".go", ".exe")
-            }
-        }
+        "nvm-code" => format!("{}.asm", stem),
+        "novaria"  => format!("{}.bin", stem),
+        "pe-asm"   => format!("{}.exe", stem),
+        _          => stem.to_string(), // llvm / elf produce native binary
     };
 
     match target {
-        "novaria" => {
-            compile_nvm(&ast, &output_file);
-        }
-        "nvm-code" => {
-            compile_nvm_asm(&ast, &output_file);
-        }
-        "elf" => {
-            compile_elf_proper(&ast, &output_file);
-        }
-        "pe-asm" => {
+        "llvm"     => compile_llvm(&ast, &output_file),
+        "novaria"  => compile_nvm(&ast, &output_file),
+        "nvm-code" => compile_nvm_asm(&ast, &output_file),
+        "elf"      => compile_elf(&ast, &output_file),
+        "pe-asm"   => {
             let mut codegen = pe::CodeGen::new(target);
             let machine_code = codegen.generate(&ast);
             let mut pe_writer = pe::PEWriter::new();
             pe_writer.write(&output_file, &machine_code)
-                .expect("Failed to write executable");
+                .expect("Failed to write PE executable");
+            println!("Compilation successful: {}", output_file);
         }
-        _ => {
-            compile_pe_with_c(&ast, &output_file);
-        }
+        _ => compile_pe_with_c(&ast, &output_file),
     }
-
-    println!("Compilation successful: {}", output_file);
 }
 
 fn load_modules(ast: &mut ast::Program, base_dir: &Path, loaded: &mut HashSet<String>) -> error::Result<()> {
@@ -150,22 +121,29 @@ fn load_modules(ast: &mut ast::Program, base_dir: &Path, loaded: &mut HashSet<St
 
         loaded.insert(module_name.clone());
 
-        
-        let module_filename = format!("{}.per", module_name);
-        
-        
+        let module_filename = format!("{}.agn", module_name);
         let mut module_file = base_dir.join(&module_filename);
-        
-        
+
         if !module_file.exists() {
-            module_file = Path::new("stdlib").join(&module_filename);
+            let per_filename = format!("{}.per", module_name);
+            module_file = base_dir.join(&per_filename);
         }
-        
-        
+
+        if !module_file.exists() {
+            module_file = Path::new("stdlib").join(format!("{}.agn", module_name));
+        }
+
+        if !module_file.exists() {
+            module_file = Path::new("stdlib").join(format!("{}.per", module_name));
+        }
+
         if !module_file.exists() {
             if let Ok(exe_path) = env::current_exe() {
                 if let Some(exe_dir) = exe_path.parent() {
-                    module_file = exe_dir.join("stdlib").join(&module_filename);
+                    module_file = exe_dir.join("stdlib").join(format!("{}.agn", module_name));
+                    if !module_file.exists() {
+                        module_file = exe_dir.join("stdlib").join(format!("{}.per", module_name));
+                    }
                 }
             }
         }
@@ -205,14 +183,50 @@ fn load_modules(ast: &mut ast::Program, base_dir: &Path, loaded: &mut HashSet<St
     Ok(())
 }
 
+fn compile_llvm(ast: &ast::Program, output_file: &str) {
+    use std::io::Write;
+
+    let mut ir_gen = llvm::LLVMIRGenerator::new();
+    let ir_code = ir_gen.generate(ast);
+
+    let ll_file = format!("{}.ll", output_file);
+    let mut file = fs::File::create(&ll_file).expect("Failed to create .ll file");
+    file.write_all(ir_code.as_bytes()).expect("Failed to write LLVM IR");
+
+    let status = process::Command::new("clang")
+        .arg("-o")
+        .arg(output_file)
+        .arg(&ll_file)
+        .status();
+
+    match status {
+        Ok(s) if s.success() => {
+            let _ = fs::remove_file(&ll_file);
+            println!("Compilation successful: {}", output_file);
+        }
+        Ok(s) => {
+            eprintln!("Clang failed with exit code: {:?}", s.code());
+            eprintln!("LLVM IR kept at: {}", ll_file);
+            process::exit(1);
+        }
+        Err(e) => {
+            eprintln!("Failed to run clang: {}", e);
+            eprintln!("Make sure clang is installed");
+            eprintln!("LLVM IR kept at: {}", ll_file);
+            process::exit(1);
+        }
+    }
+}
+
 fn compile_nvm(ast: &ast::Program, output_file: &str) {
     use std::io::Write;
 
     let mut nvm_gen = nvm::NVMCodeGen::new();
     let bytecode = nvm_gen.generate(ast);
 
-    let mut file = fs::File::create(output_file).expect("Failed to create .nvm file");
+    let mut file = fs::File::create(output_file).expect("Failed to create .bin file");
     file.write_all(&bytecode).expect("Failed to write NVM bytecode");
+    println!("Compilation successful: {}", output_file);
 }
 
 fn compile_nvm_asm(ast: &ast::Program, output_file: &str) {
@@ -223,20 +237,10 @@ fn compile_nvm_asm(ast: &ast::Program, output_file: &str) {
 
     let mut file = fs::File::create(output_file).expect("Failed to create .asm file");
     file.write_all(asm_code.as_bytes()).expect("Failed to write NVM assembly");
+    println!("Compilation successful: {}", output_file);
 }
 
-fn compile_pe_with_c(ast: &ast::Program, output_file: &str) {
-    let mut c_gen = pe::c_codegen::CCodeGen::new();
-    let c_code = c_gen.generate(ast).expect("Failed to generate C code");
-    
-    if let Err(e) = c_gen.compile_c_code(&c_code, output_file) {
-        eprintln!("Failed to compile C code: {}", e);
-        eprintln!("Make sure cl.exe is available (run from Developer Command Prompt)");
-        process::exit(1);
-    }
-}
-
-fn compile_elf_proper(ast: &ast::Program, output_file: &str) {
+fn compile_elf(ast: &ast::Program, output_file: &str) {
     use std::io::Write;
 
     let mut asm_gen = elf::AsmGenerator::new();
@@ -269,5 +273,16 @@ fn compile_elf_proper(ast: &ast::Program, output_file: &str) {
             eprintln!("Assembly file kept at: {}", asm_file);
             process::exit(1);
         }
+    }
+}
+
+fn compile_pe_with_c(ast: &ast::Program, output_file: &str) {
+    let mut c_gen = pe::c_codegen::CCodeGen::new();
+    let c_code = c_gen.generate(ast).expect("Failed to generate C code");
+
+    if let Err(e) = c_gen.compile_c_code(&c_code, output_file) {
+        eprintln!("Failed to compile C code: {}", e);
+        eprintln!("Make sure cl.exe is available (run from Developer Command Prompt)");
+        process::exit(1);
     }
 }
