@@ -29,6 +29,10 @@ pub enum Token {
     And,
     Or,
     Not,
+    Pipe,
+    Caret,
+    LShift,
+    RShift,
 
     LeftParen,
     RightParen,
@@ -272,7 +276,10 @@ impl Lexer {
                 }
                 Some('<') => {
                     self.advance();
-                    if self.current_char == Some('=') {
+                    if self.current_char == Some('<') {
+                        tokens.push(Token::LShift);
+                        self.advance();
+                    } else if self.current_char == Some('=') {
                         tokens.push(Token::LessEqual);
                         self.advance();
                     } else {
@@ -281,7 +288,10 @@ impl Lexer {
                 }
                 Some('>') => {
                     self.advance();
-                    if self.current_char == Some('=') {
+                    if self.current_char == Some('>') {
+                        tokens.push(Token::RShift);
+                        self.advance();
+                    } else if self.current_char == Some('=') {
                         tokens.push(Token::GreaterEqual);
                         self.advance();
                     } else {
@@ -302,7 +312,13 @@ impl Lexer {
                     if self.current_char == Some('|') {
                         tokens.push(Token::Or);
                         self.advance();
+                    } else {
+                        tokens.push(Token::Pipe);
                     }
+                }
+                Some('^') => {
+                    tokens.push(Token::Caret);
+                    self.advance();
                 }
                 Some('(') => {
                     tokens.push(Token::LeftParen);

@@ -583,13 +583,61 @@ impl Parser {
     }
 
     fn parse_and(&mut self) -> Expression {
-        let mut left = self.parse_equality();
+        let mut left = self.parse_bitor();
 
         while matches!(self.current_token(), Token::And) {
             self.advance();
             let right = self.parse_equality();
             left = Expression::Binary {
                 op: BinaryOp::And,
+                left: Box::new(left),
+                right: Box::new(right),
+            };
+        }
+
+        left
+    }
+
+    fn parse_bitor(&mut self) -> Expression {
+        let mut left = self.parse_bitxor();
+
+        while matches!(self.current_token(), Token::Pipe) {
+            self.advance();
+            let right = self.parse_bitxor();
+            left = Expression::Binary {
+                op: BinaryOp::BitOr,
+                left: Box::new(left),
+                right: Box::new(right),
+            };
+        }
+
+        left
+    }
+
+    fn parse_bitxor(&mut self) -> Expression {
+        let mut left = self.parse_bitand();
+
+        while matches!(self.current_token(), Token::Caret) {
+            self.advance();
+            let right = self.parse_bitand();
+            left = Expression::Binary {
+                op: BinaryOp::BitXor,
+                left: Box::new(left),
+                right: Box::new(right),
+            };
+        }
+
+        left
+    }
+
+    fn parse_bitand(&mut self) -> Expression {
+        let mut left = self.parse_equality();
+
+        while matches!(self.current_token(), Token::Ampersand) {
+            self.advance();
+            let right = self.parse_equality();
+            left = Expression::Binary {
+                op: BinaryOp::BitAnd,
                 left: Box::new(left),
                 right: Box::new(right),
             };
@@ -621,7 +669,7 @@ impl Parser {
     }
 
     fn parse_comparison(&mut self) -> Expression {
-        let mut left = self.parse_additive();
+        let mut left = self.parse_shift();
 
         loop {
             let op = match self.current_token() {
@@ -629,6 +677,28 @@ impl Parser {
                 Token::LessEqual => BinaryOp::LessEqual,
                 Token::Greater => BinaryOp::Greater,
                 Token::GreaterEqual => BinaryOp::GreaterEqual,
+                _ => break,
+            };
+
+            self.advance();
+            let right = self.parse_additive();
+            left = Expression::Binary {
+                op,
+                left: Box::new(left),
+                right: Box::new(right),
+            };
+        }
+
+        left
+    }
+
+    fn parse_shift(&mut self) -> Expression {
+        let mut left = self.parse_additive();
+
+        loop {
+            let op = match self.current_token() {
+                Token::LShift => BinaryOp::Shl,
+                Token::RShift => BinaryOp::Shr,
                 _ => break,
             };
 

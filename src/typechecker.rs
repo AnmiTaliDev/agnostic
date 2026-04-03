@@ -365,7 +365,8 @@ impl TypeChecker {
                 let right_type = self.infer_expression(right);
                 
                 match op {
-                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => {
+                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod |
+                    BinaryOp::BitAnd | BinaryOp::BitOr | BinaryOp::BitXor | BinaryOp::Shl | BinaryOp::Shr => {
                         if !left_type.is_numeric() {
                             self.add_error(format!(
                                 "Left operand of {:?} must be numeric, got {:?}",

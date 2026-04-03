@@ -355,6 +355,11 @@ impl NVMAssemblyGenerator {
                         self.output.push_str("    push 0\n");
                         self.output.push_str("    eq\n");
                     }
+                    BinaryOp::BitAnd => self.output.push_str("    band\n"),
+                    BinaryOp::BitOr  => self.output.push_str("    bor\n"),
+                    BinaryOp::BitXor => self.output.push_str("    bxor\n"),
+                    BinaryOp::Shl    => self.output.push_str("    shl\n"),
+                    BinaryOp::Shr    => self.output.push_str("    shr\n"),
                     _ => {
                         self.output.push_str("    ; unsupported binary op\n");
                     }

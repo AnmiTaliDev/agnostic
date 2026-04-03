@@ -582,6 +582,36 @@ impl LLVMIRGenerator {
                             result, lv
                         ));
                     }
+                    BinaryOp::BitAnd => {
+                        self.body.push_str(&format!(
+                            "  {} = and i64 {}, {}\n",
+                            result, lv, rv
+                        ));
+                    }
+                    BinaryOp::BitOr => {
+                        self.body.push_str(&format!(
+                            "  {} = or i64 {}, {}\n",
+                            result, lv, rv
+                        ));
+                    }
+                    BinaryOp::BitXor => {
+                        self.body.push_str(&format!(
+                            "  {} = xor i64 {}, {}\n",
+                            result, lv, rv
+                        ));
+                    }
+                    BinaryOp::Shl => {
+                        self.body.push_str(&format!(
+                            "  {} = shl i64 {}, {}\n",
+                            result, lv, rv
+                        ));
+                    }
+                    BinaryOp::Shr => {
+                        self.body.push_str(&format!(
+                            "  {} = ashr i64 {}, {}\n",
+                            result, lv, rv
+                        ));
+                    }
                 }
                 result
             }

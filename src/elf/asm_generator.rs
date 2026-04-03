@@ -469,6 +469,22 @@ impl AsmGenerator {
                     }
                     BinaryOp::Concat => {
                     }
+                    BinaryOp::BitAnd => {
+                        self.output.push_str("    andq    %rcx, %rax\n");
+                    }
+                    BinaryOp::BitOr => {
+                        self.output.push_str("    orq     %rcx, %rax\n");
+                    }
+                    BinaryOp::BitXor => {
+                        self.output.push_str("    xorq    %rcx, %rax\n");
+                    }
+                    BinaryOp::Shl => {
+                        self.output.push_str("    movq    %rcx, %rcx\n");
+                        self.output.push_str("    shlq    %cl, %rax\n");
+                    }
+                    BinaryOp::Shr => {
+                        self.output.push_str("    sarq    %cl, %rax\n");
+                    }
                     _ => {}
                 }
             }

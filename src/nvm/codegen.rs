@@ -29,7 +29,6 @@ const STORE_ABS: u8 = 0x45;
 const SYSCALL: u8 = 0x50;
 
 const SYSCALL_EXIT: u8 = 0x00;
-const SYSCALL_PRINT: u8 = 0x0F;
 const SYSCALL_EXEC: u8 = 0x01;
 const SYSCALL_OPEN: u8 = 0x02;
 const SYSCALL_READ: u8 = 0x03;
@@ -42,7 +41,7 @@ const SYSCALL_MSG_SEND: u8 = 0x0A;
 const SYSCALL_MSG_RECEIVE: u8 = 0x0B;
 const SYSCALL_PORT_IN_BYTE: u8 = 0x0C;
 const SYSCALL_PORT_OUT_BYTE: u8 = 0x0D;
-const SYSCALL_GET_LOCAL_ADDR: u8 = 0x0E;
+const SYSCALL_PRINT: u8 = 0x0E;
 
 pub struct NVMCodeGen {
     bytecode: Vec<u8>,
@@ -633,18 +632,9 @@ impl NVMCodeGen {
                 self.emit_label_ref(&func_label);
             }
 
-            Expression::AddressOf { operand } => {
-                if let Expression::Identifier(name) = operand.as_ref() {
-                    if let Some(&local_index) = self.local_vars.get(name) {
-                        self.emit_push32(local_index as i32);
-                        self.emit_byte(SYSCALL);
-                        self.emit_byte(SYSCALL_GET_LOCAL_ADDR);
-                    } else {
-                        panic!("Variable not found: {}", name);
-                    }
-                } else {
-                    panic!("AddressOf only supports identifiers");
-                }
+            Expression::AddressOf { .. } => {
+                // AddressOf is not supported by the NVM instruction set
+                self.emit_push32(0);
             }
 
             Expression::Deref { operand } => {
@@ -739,8 +729,7 @@ impl NVMCodeGen {
                             "msg_receive" | "msg_recv" => SYSCALL_MSG_RECEIVE,
                             "inb" | "port_in_byte" => SYSCALL_PORT_IN_BYTE,
                             "outb" | "port_out_byte" => SYSCALL_PORT_OUT_BYTE,
-                            
-                            "get_local_addr" => SYSCALL_GET_LOCAL_ADDR,
+                            "print" => SYSCALL_PRINT,
                             _ => {
                                 eprintln!("Warning: Unknown syscall name '{}', defaulting to 0", syscall_arg);
                                 0

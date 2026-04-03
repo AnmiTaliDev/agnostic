@@ -179,6 +179,11 @@ pub enum BinaryOp {
     And,
     Or,
     Concat,
+    BitAnd,
+    BitOr,
+    BitXor,
+    Shl,
+    Shr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
