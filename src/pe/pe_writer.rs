@@ -216,7 +216,7 @@ impl PEWriter {
         }
     }
 
-    fn write_section_headers(&self, buffer: &mut Vec<u8>, code_size: u32, import_size: u32, data_size: u32, num_sections: u16) {
+    fn write_section_headers(&self, buffer: &mut Vec<u8>, code_size: u32, import_size: u32, data_size: u32, _num_sections: u16) {
         let name = b".text\0\0\0";
         buffer.extend_from_slice(name);
         buffer.extend_from_slice(&code_size.to_le_bytes());

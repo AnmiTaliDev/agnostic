@@ -415,8 +415,6 @@ impl Parser {
     }
 
     fn parse_asm(&mut self) -> crate::error::Result<Statement> {
-        use crate::ast::AsmPart;
-        
         self.expect(Token::Asm)?;
         
         if let Token::String(code) = self.current_token() {
@@ -797,7 +795,7 @@ impl Parser {
     }
 
     fn parse_template_string(&mut self, s: String) -> Expression {
-        use crate::ast::{TemplateStringPart, FormatSpec, FormatType};
+        use crate::ast::TemplateStringPart;
         
         let mut parts = Vec::new();
         let mut current_literal = String::new();

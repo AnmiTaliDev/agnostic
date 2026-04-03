@@ -208,7 +208,7 @@ impl CCodeGen {
                 self.generate_expression(right)?;
                 self.output.push_str(")");
             }
-            Expression::TemplateString { parts } => {
+            Expression::TemplateString { parts: _ } => {
                 let temp_name = format!("_temp_str_{}", self.temp_counter);
                 self.temp_counter += 1;
                 

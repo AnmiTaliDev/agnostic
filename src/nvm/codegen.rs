@@ -30,6 +30,7 @@ const SYSCALL: u8 = 0x50;
 
 const SYSCALL_EXIT: u8 = 0x00;
 const SYSCALL_EXEC: u8 = 0x01;
+#[allow(dead_code)]
 const SYSCALL_OPEN: u8 = 0x02;
 const SYSCALL_READ: u8 = 0x03;
 const SYSCALL_WRITE: u8 = 0x04;
@@ -43,6 +44,7 @@ const SYSCALL_PORT_IN_BYTE: u8 = 0x0C;
 const SYSCALL_PORT_OUT_BYTE: u8 = 0x0D;
 const SYSCALL_PRINT: u8 = 0x0E;
 
+#[allow(dead_code)]
 pub struct NVMCodeGen {
     bytecode: Vec<u8>,
     labels: HashMap<String, u32>,
@@ -668,6 +670,7 @@ impl NVMCodeGen {
         self.bytecode.extend_from_slice(&bytes);
     }
     
+    #[allow(dead_code)]
     fn emit_vga_char(&mut self, ch: u8, attr: u8) {
         self.emit_push32(self.vga_cursor as i32);
         self.emit_push32(((attr as u32) << 8 | ch as u32) as i32);
@@ -675,6 +678,7 @@ impl NVMCodeGen {
         self.vga_cursor += 2;
     }
     
+    #[allow(dead_code)]
     fn vga_newline(&mut self) {
         self.vga_cursor = ((self.vga_cursor - 0xB8000) / 160 + 1) * 160 + 0xB8000;
         self.vga_cursor += 160;
