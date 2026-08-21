@@ -7,15 +7,25 @@ import "stdio"
 func main() {
     stdio.PrintlnStr(string.toUpper("hello"))
     stdio.PrintlnStr(string.toLower("WORLD"))
-    stdio.Println(string.indexOf("hello world", "world"))
-    stdio.Println(string.indexOf("hello world", "xyz"))
+
+    var idx Option<int> = string.indexOf("hello world", "world")
+    stdio.Println(idx.some)
+    stdio.Println(idx.value)
+
+    var idxMiss Option<int> = string.indexOf("hello world", "xyz")
+    stdio.Println(idxMiss.some)
+
     stdio.Println(string.contains("hello world", "lo wo"))
     stdio.Println(string.contains("hello world", "xyz"))
     stdio.Println(string.startsWith("hello", "he"))
     stdio.Println(string.startsWith("hello", "lo"))
     stdio.Println(string.endsWith("hello", "lo"))
     stdio.Println(string.endsWith("hello", "he"))
-    stdio.Println(string.charAt("hello", 1))
+
+    var ch Option<int> = string.charAt("hello", 1)
+    stdio.Println(ch.some)
+    stdio.Println(ch.value)
+
     stdio.PrintlnStr(string.substr("hello world", 6, 5))
 
     var trueArgCount int = 1
@@ -23,13 +33,14 @@ func main() {
         stdio.PrintlnStr("argcount_ok")
     }
 
-    var fd int = os.OpenCreate("/tmp/agn_os_string_test.txt")
-    os.WriteFd(fd, "roundtrip")
-    os.Close(fd)
+    var fd Option<int> = os.OpenCreate("/tmp/agn_os_string_test.txt")
+    os.WriteFd(fd.value, "roundtrip")
+    os.Close(fd.value)
 
-    var rfd int = os.OpenRead("/tmp/agn_os_string_test.txt")
+    var rfd Option<int> = os.OpenRead("/tmp/agn_os_string_test.txt")
     var buf [16]int
-    var n int = os.ReadFd(rfd, &buf, 15)
-    os.Close(rfd)
-    stdio.Println(n)
+    var n Option<int> = os.ReadFd(rfd.value, &buf, 15)
+    os.Close(rfd.value)
+    stdio.Println(n.some)
+    stdio.Println(n.value)
 }

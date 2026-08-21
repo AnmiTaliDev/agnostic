@@ -20,9 +20,8 @@ pub fn is_empty(s string) int {
     return 0
 }
 
-// -1 if not found
-pub fn indexOf(s string, sub string) int {
-    return 0
+pub fn indexOf(s string, sub string) Option<int> {
+    return Option<int>{some: 0, value: 0}
 }
 
 pub fn contains(s string, sub string) int {
@@ -37,9 +36,8 @@ pub fn endsWith(s string, suffix string) int {
     return 0
 }
 
-// -1 if out of bounds
-pub fn charAt(s string, index int) int {
-    return 0
+pub fn charAt(s string, index int) Option<int> {
+    return Option<int>{some: 0, value: 0}
 }
 
 // clamped to the string's bounds

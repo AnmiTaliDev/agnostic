@@ -134,9 +134,9 @@ expect_gcc_run string_stdlib "scripts/testdata/string_test.agn" \
     "$(printf '5\n0\n-1\n1\nfoobar\n1\n0')"
 
 expect_llvm_run os_string "scripts/testdata/os_string_test.agn" \
-    "$(printf 'HELLO\nworld\n6\n-1\n1\n0\n1\n0\n1\n0\n101\nworld\nargcount_ok\n9')"
+    "$(printf 'HELLO\nworld\n1\n6\n0\n1\n0\n1\n0\n1\n0\n1\n101\nworld\nargcount_ok\n1\n9')"
 expect_gcc_run os_string "scripts/testdata/os_string_test.agn" \
-    "$(printf 'HELLO\nworld\n6\n-1\n1\n0\n1\n0\n1\n0\n101\nworld\nargcount_ok\n9')"
+    "$(printf 'HELLO\nworld\n1\n6\n0\n1\n0\n1\n0\n1\n0\n1\n101\nworld\nargcount_ok\n1\n9')"
 
 expect_nvm_compile math_stdlib "scripts/testdata/math_test.agn" yes
 expect_nvm_compile string_stdlib "scripts/testdata/string_test.agn" yes

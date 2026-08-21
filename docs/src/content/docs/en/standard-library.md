@@ -52,11 +52,11 @@ All functions take and return `int`.
 | `compare` | `(s1 string, s2 string) int` | 0 if equal, -1 if `s1 < s2`, 1 if `s1 > s2` |
 | `concat` | `(s1 string, s2 string) string` | |
 | `is_empty` | `(s string) int` | 1 or 0 |
-| `indexOf` | `(s string, sub string) int` | index of the first occurrence of `sub`, or -1 |
+| `indexOf` | `(s string, sub string) Option<int>` | index of the first occurrence of `sub`; `some=0` if not found |
 | `contains` | `(s string, sub string) int` | 1 or 0 |
 | `startsWith` | `(s string, prefix string) int` | 1 or 0 |
 | `endsWith` | `(s string, suffix string) int` | 1 or 0 |
-| `charAt` | `(s string, index int) int` | byte code at `index`, or -1 if out of bounds |
+| `charAt` | `(s string, index int) Option<int>` | byte code at `index`; `some=0` if out of bounds |
 | `substr` | `(s string, start int, len int) string` | clamped to the string's bounds |
 | `toUpper` | `(s string) string` | ASCII only |
 | `toLower` | `(s string) string` | ASCII only |
@@ -71,14 +71,16 @@ File descriptors and command-line arguments. Compile errors under `--backend=nvm
 |---|---|---|
 | `ArgCount` | `() int` | number of command-line arguments, including argv[0] (the program path) |
 | `Arg` | `(index int) string` | argument at `index` |
-| `OpenRead` | `(path string) int` | file descriptor, or negative on error |
-| `OpenCreate` | `(path string) int` | create/truncate for writing, file descriptor or negative on error |
+| `OpenRead` | `(path string) Option<int>` | value is the file descriptor; `some=0` on error |
+| `OpenCreate` | `(path string) Option<int>` | create/truncate for writing; value is the file descriptor, `some=0` on error |
 | `Close` | `(fd int) int` | |
-| `ReadFd` | `(fd int, buffer int, maxlen int) int` | reads into a heap buffer address, like `stdio.ReadLine`; returns bytes read or negative on error |
-| `WriteFd` | `(fd int, data string) int` | bytes written, or negative on error |
+| `ReadFd` | `(fd int, buffer int, maxlen int) Option<int>` | reads into a heap buffer address, like `stdio.ReadLine`; value is bytes read, `some=0` on error |
+| `WriteFd` | `(fd int, data string) Option<int>` | value is bytes written, `some=0` on error |
 | `Exit` | `(code int)` | terminates the process immediately, bypassing any remaining code in the caller |
 
 `ReadFd`'s (and `stdio.ReadLine`'s) `buffer` parameter is typed `int` but accepts the pointer produced by `&arr` directly — a pointer value assigned to an `int` parameter decays to its address.
+
+`OpenRead`, `OpenCreate`, `ReadFd`, and `WriteFd` return `Option<int>` (see [Generic structs](/en/structs/#generic-structs)) instead of a raw sentinel: `some` is 1 on success and 0 on failure, and `value` holds the file descriptor or byte count only when `some` is 1 — check `some` before trusting `value`.
 
 ## novaria
 

@@ -9,28 +9,28 @@ pub fn Arg(index int) string {
     return ""
 }
 
-// returns a file descriptor, or negative on error
-pub fn OpenRead(path string) int {
-    return 0
+// value is the file descriptor
+pub fn OpenRead(path string) Option<int> {
+    return Option<int>{some: 0, value: 0}
 }
 
-// truncates if the file exists; returns a file descriptor, or negative on error
-pub fn OpenCreate(path string) int {
-    return 0
+// truncates if the file exists; value is the file descriptor
+pub fn OpenCreate(path string) Option<int> {
+    return Option<int>{some: 0, value: 0}
 }
 
 pub fn Close(fd int) int {
     return 0
 }
 
-// returns bytes read, or negative on error
-pub fn ReadFd(fd int, buffer int, maxlen int) int {
-    return 0
+// value is the number of bytes read
+pub fn ReadFd(fd int, buffer int, maxlen int) Option<int> {
+    return Option<int>{some: 0, value: 0}
 }
 
-// returns bytes written, or negative on error
-pub fn WriteFd(fd int, data string) int {
-    return 0
+// value is the number of bytes written
+pub fn WriteFd(fd int, data string) Option<int> {
+    return Option<int>{some: 0, value: 0}
 }
 
 pub fn Exit(code int) {

@@ -603,6 +603,17 @@ struct Codegen::Impl {
         return TypedValue{llvm::ConstantInt::get(i64Ty, 0), Type{TypeKind::Unknown}};
     }
 
+    TypedValue wrapOptionInt(llvm::Value* rawValue, const std::string& qualifiedFnName) {
+        Type retType = checker.functions().at(qualifiedFnName).returnType;
+        auto* structTy = structTypes.at(retType.structName);
+        auto* someFlag = builder.CreateZExt(
+            builder.CreateICmpSGE(rawValue, llvm::ConstantInt::get(i64Ty, 0)), i64Ty);
+        llvm::Value* agg = llvm::UndefValue::get(structTy);
+        agg = builder.CreateInsertValue(agg, someFlag, 0);
+        agg = builder.CreateInsertValue(agg, rawValue, 1);
+        return TypedValue{agg, retType};
+    }
+
     TypedValue genStringCall(const std::string& member, std::vector<ast::Expression>& args) {
         auto rt = [&](const std::string& name, llvm::Type* retTy, std::vector<llvm::Type*> paramTys,
                       std::vector<llvm::Value*> callArgs) {
@@ -636,7 +647,7 @@ struct Codegen::Impl {
         if (member == "indexOf") {
             auto* call = rt("agn_rt_index_of", i64Ty, {ptrTy, ptrTy},
                              {genExpr(args[0]).value, genExpr(args[1]).value});
-            return TypedValue{call, Type{TypeKind::I64}};
+            return wrapOptionInt(call, "string.indexOf");
         }
         if (member == "contains") {
             auto* call = rt("agn_rt_contains", i64Ty, {ptrTy, ptrTy},
@@ -656,7 +667,7 @@ struct Codegen::Impl {
         if (member == "charAt") {
             auto* call = rt("agn_rt_char_at", i64Ty, {ptrTy, i64Ty},
                              {genExpr(args[0]).value, toI64(genExpr(args[1]))});
-            return TypedValue{call, Type{TypeKind::I64}};
+            return wrapOptionInt(call, "string.charAt");
         }
         if (member == "substr") {
             auto* call = rt("agn_rt_substr", ptrTy, {ptrTy, i64Ty, i64Ty},
@@ -691,11 +702,11 @@ struct Codegen::Impl {
         }
         if (member == "OpenRead") {
             auto* call = rt("agn_rt_open_read", i64Ty, {ptrTy}, {genExpr(args[0]).value});
-            return TypedValue{call, Type{TypeKind::I64}};
+            return wrapOptionInt(call, "os.OpenRead");
         }
         if (member == "OpenCreate") {
             auto* call = rt("agn_rt_open_create", i64Ty, {ptrTy}, {genExpr(args[0]).value});
-            return TypedValue{call, Type{TypeKind::I64}};
+            return wrapOptionInt(call, "os.OpenCreate");
         }
         if (member == "Close") {
             auto* call = rt("agn_rt_close", i64Ty, {i64Ty}, {toI64(genExpr(args[0]))});
@@ -706,14 +717,14 @@ struct Codegen::Impl {
             auto* bufPtr = toBufferPtr(bufVal);
             auto* call = rt("agn_rt_read_fd", i64Ty, {i64Ty, ptrTy, i64Ty},
                              {toI64(genExpr(args[0])), bufPtr, toI64(genExpr(args[2]))});
-            return TypedValue{call, Type{TypeKind::I64}};
+            return wrapOptionInt(call, "os.ReadFd");
         }
         if (member == "WriteFd") {
             auto* data = genExpr(args[1]).value;
             auto* len = rt("agn_rt_strlen", i64Ty, {ptrTy}, {data});
             auto* call = rt("agn_rt_write_fd", i64Ty, {i64Ty, ptrTy, i64Ty},
                              {toI64(genExpr(args[0])), data, len});
-            return TypedValue{call, Type{TypeKind::I64}};
+            return wrapOptionInt(call, "os.WriteFd");
         }
         if (member == "Exit") {
             rt("agn_rt_exit", voidTy, {i64Ty}, {toI64(genExpr(args[0]))});

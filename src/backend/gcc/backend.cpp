@@ -668,6 +668,19 @@ struct GccBackend::Impl {
         return TypedValue{constI64(0), Type{TypeKind::Unknown}};
     }
 
+    TypedValue wrapOptionInt(gcc_jit_rvalue* rawValue, const std::string& qualifiedFnName) {
+        Type retType = checker.functions().at(qualifiedFnName).returnType;
+        auto* structGcc = structTypes.at(retType.structName);
+        auto* tmp = gcc_jit_function_new_local(curFn, loc, gcc_jit_struct_as_type(structGcc), "opt_wrap");
+        auto* cmp = gcc_jit_context_new_comparison(ctxt, loc, GCC_JIT_COMPARISON_GE, rawValue, constI64(0));
+        auto* someFlag = toI64(TypedValue{cmp, Type{TypeKind::Bool}});
+        auto* someField = gcc_jit_struct_get_field(structGcc, 0);
+        auto* valueField = gcc_jit_struct_get_field(structGcc, 1);
+        gcc_jit_block_add_assignment(curBlock, loc, gcc_jit_lvalue_access_field(tmp, loc, someField), someFlag);
+        gcc_jit_block_add_assignment(curBlock, loc, gcc_jit_lvalue_access_field(tmp, loc, valueField), rawValue);
+        return TypedValue{gcc_jit_lvalue_as_rvalue(tmp), retType};
+    }
+
     TypedValue genStringCall(const std::string& member, std::vector<ast::Expression>& args) {
         if (member == "len") {
             return TypedValue{callRt("agn_rt_strlen", i64Ty, {ptrTy}, {genExpr(args[0]).value}), Type{TypeKind::I64}};
@@ -683,9 +696,9 @@ struct GccBackend::Impl {
             return genConcatValues(s1, s2);
         }
         if (member == "indexOf") {
-            return TypedValue{callRt("agn_rt_index_of", i64Ty, {ptrTy, ptrTy},
-                                      {genExpr(args[0]).value, genExpr(args[1]).value}),
-                               Type{TypeKind::I64}};
+            return wrapOptionInt(callRt("agn_rt_index_of", i64Ty, {ptrTy, ptrTy},
+                                         {genExpr(args[0]).value, genExpr(args[1]).value}),
+                                  "string.indexOf");
         }
         if (member == "contains") {
             return TypedValue{callRt("agn_rt_contains", i64Ty, {ptrTy, ptrTy},
@@ -703,9 +716,9 @@ struct GccBackend::Impl {
                                Type{TypeKind::I64}};
         }
         if (member == "charAt") {
-            return TypedValue{callRt("agn_rt_char_at", i64Ty, {ptrTy, i64Ty},
-                                      {genExpr(args[0]).value, toI64(genExpr(args[1]))}),
-                               Type{TypeKind::I64}};
+            return wrapOptionInt(callRt("agn_rt_char_at", i64Ty, {ptrTy, i64Ty},
+                                         {genExpr(args[0]).value, toI64(genExpr(args[1]))}),
+                                  "string.charAt");
         }
         if (member == "substr") {
             return TypedValue{callRt("agn_rt_substr", ptrTy, {ptrTy, i64Ty, i64Ty},
@@ -731,10 +744,11 @@ struct GccBackend::Impl {
             return TypedValue{callRt("agn_rt_argv", ptrTy, {i64Ty}, {toI64(genExpr(args[0]))}), Type{TypeKind::String}};
         }
         if (member == "OpenRead") {
-            return TypedValue{callRt("agn_rt_open_read", i64Ty, {ptrTy}, {genExpr(args[0]).value}), Type{TypeKind::I64}};
+            return wrapOptionInt(callRt("agn_rt_open_read", i64Ty, {ptrTy}, {genExpr(args[0]).value}), "os.OpenRead");
         }
         if (member == "OpenCreate") {
-            return TypedValue{callRt("agn_rt_open_create", i64Ty, {ptrTy}, {genExpr(args[0]).value}), Type{TypeKind::I64}};
+            return wrapOptionInt(callRt("agn_rt_open_create", i64Ty, {ptrTy}, {genExpr(args[0]).value}),
+                                  "os.OpenCreate");
         }
         if (member == "Close") {
             return TypedValue{callRt("agn_rt_close", i64Ty, {i64Ty}, {toI64(genExpr(args[0]))}), Type{TypeKind::I64}};
@@ -742,16 +756,16 @@ struct GccBackend::Impl {
         if (member == "ReadFd") {
             auto bufVal = genExpr(args[1]);
             auto* bufPtr = toBufferPtr(bufVal);
-            return TypedValue{callRt("agn_rt_read_fd", i64Ty, {i64Ty, ptrTy, i64Ty},
-                                      {toI64(genExpr(args[0])), bufPtr, toI64(genExpr(args[2]))}),
-                               Type{TypeKind::I64}};
+            return wrapOptionInt(callRt("agn_rt_read_fd", i64Ty, {i64Ty, ptrTy, i64Ty},
+                                         {toI64(genExpr(args[0])), bufPtr, toI64(genExpr(args[2]))}),
+                                  "os.ReadFd");
         }
         if (member == "WriteFd") {
             auto* data = genExpr(args[1]).value;
             auto* len = callRt("agn_rt_strlen", i64Ty, {ptrTy}, {data});
-            return TypedValue{callRt("agn_rt_write_fd", i64Ty, {i64Ty, ptrTy, i64Ty},
-                                      {toI64(genExpr(args[0])), data, len}),
-                               Type{TypeKind::I64}};
+            return wrapOptionInt(
+                callRt("agn_rt_write_fd", i64Ty, {i64Ty, ptrTy, i64Ty}, {toI64(genExpr(args[0])), data, len}),
+                "os.WriteFd");
         }
         if (member == "Exit") {
             callRt("agn_rt_exit", voidTy, {i64Ty}, {toI64(genExpr(args[0]))});
