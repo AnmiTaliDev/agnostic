@@ -158,10 +158,13 @@ int main(int argc, char** argv) {
     std::string source = readFile(sourceFile);
     agn::ast::Program program = parseSource(source, sourceFile);
 
-    program.structs.push_back(agn::ast::StructDecl{
-        "Result", {"T", "E"}, {{"ok", "int"}, {"value", "T"}, {"err", "E"}}});
-    program.structs.push_back(
-        agn::ast::StructDecl{"Option", {"T"}, {{"some", "int"}, {"value", "T"}}});
+    fs::path resultFile = findModuleFile("result", sourceDir, exeDir);
+    if (resultFile.empty()) {
+        std::cerr << "error: could not find builtin stdlib module 'result' (result.agn)\n";
+        return 1;
+    }
+    auto resultProgram = parseSource(readFile(resultFile.string()), resultFile.string());
+    for (auto& s : resultProgram.structs) program.structs.push_back(std::move(s));
 
     std::set<std::string> loaded;
     loadModules(program, sourceDir, exeDir, loaded);

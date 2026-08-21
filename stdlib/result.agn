@@ -1,0 +1,12 @@
+package result
+
+struct Result<T, E> {
+    ok int
+    value T
+    err E
+}
+
+struct Option<T> {
+    some int
+    value T
+}

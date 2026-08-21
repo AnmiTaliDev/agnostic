@@ -1,9 +1,13 @@
 ---
 title: Standard Library
-description: stdio, math, string, os, and novaria.
+description: result, stdio, math, string, os, and novaria.
 ---
 
 Every function in these modules is a compiler intrinsic: the body written in the `.agn` source exists only so the file type-checks and so a human reading it can see the signature. The actual behavior is generated directly by the compiler backend, not by running that body. `ReadInt`, `ReadChar`, `ReadLine`, template string interpolation, and `++` are the exceptions called out below where the source body's stated behavior does not hold under `--backend=nvm`.
+
+## result
+
+`stdlib/result.agn` declares `Result<T,E>` (`ok int`, `value T`, `err E`) and `Option<T>` (`some int`, `value T`). Unlike every other module here, these two generic structs are always in scope — no `import "result"` needed — and their fields are real data, not a compiler-generated body; the compiler parses this file directly and merges its declarations into every compiled program. See [Generic structs](/en/structs/#generic-structs) for how instantiation (`Result<int,string>`) and monomorphization work.
 
 ## stdio
 
