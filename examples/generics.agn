@@ -1,0 +1,38 @@
+package main
+
+import "stdio"
+
+func safeDivide(a int, b int) Result<int,string> {
+    if b == 0 {
+        return Result<int,string>{ok: 0, value: 0, err: "divide by zero"}
+    }
+    return Result<int,string>{ok: 1, value: a / b, err: ""}
+}
+
+func findFirst(target int) Option<int> {
+    var i int = 0
+    for i < 5 {
+        if i == target {
+            return Option<int>{some: 1, value: i}
+        }
+        i = i + 1
+    }
+    return Option<int>{some: 0, value: 0}
+}
+
+func main() {
+    var r1 Result<int,string> = safeDivide(10, 2)
+    stdio.Println(r1.ok)
+    stdio.Println(r1.value)
+
+    var r2 Result<int,string> = safeDivide(10, 0)
+    stdio.Println(r2.ok)
+    stdio.PrintlnStr(r2.err)
+
+    var o1 Option<int> = findFirst(3)
+    stdio.Println(o1.some)
+    stdio.Println(o1.value)
+
+    var o2 Option<int> = findFirst(9)
+    stdio.Println(o2.some)
+}

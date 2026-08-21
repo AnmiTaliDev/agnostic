@@ -100,9 +100,63 @@ std::optional<std::string> Parser::tryParseType() {
     if (current().kind == TokenKind::Identifier) {
         std::string t = current().text;
         advance();
+        if (current().kind == TokenKind::Less) t += parseGenericArgsString();
         return t;
     }
     return std::nullopt;
+}
+
+std::string Parser::parseGenericArgsString() {
+    expect(TokenKind::Less);
+    std::string out = "<";
+    bool first = true;
+    while (current().kind != TokenKind::Greater && current().kind != TokenKind::RShift) {
+        if (!first) out += ",";
+        first = false;
+        auto t = tryParseType();
+        if (!t) error("expected type argument");
+        out += *t;
+        if (current().kind == TokenKind::Comma) advance();
+    }
+    consumeClosingAngle();
+    out += ">";
+    return out;
+}
+
+bool Parser::looksLikeGenericArgsHead() const {
+    if (current().kind != TokenKind::Less) return false;
+    size_t offset = 1;
+    int depth = 1;
+    while (depth > 0) {
+        if (offset > 64) return false;
+        TokenKind k = peek(offset).kind;
+        if (k == TokenKind::Identifier || k == TokenKind::Comma) {
+            // part of a type-argument name or separator
+        } else if (k == TokenKind::Less) {
+            depth++;
+        } else if (k == TokenKind::Greater) {
+            depth--;
+        } else if (k == TokenKind::RShift) {
+            depth -= 2;
+        } else {
+            return false;
+        }
+        offset++;
+    }
+    if (depth != 0) return false;
+    return peek(offset).kind == TokenKind::LeftBrace;
+}
+
+void Parser::consumeClosingAngle() {
+    if (current().kind == TokenKind::Greater) {
+        advance();
+        return;
+    }
+    if (current().kind == TokenKind::RShift) {
+        tokens_[position_].kind = TokenKind::Greater;
+        return;
+    }
+    error("expected '>' to close generic type argument list");
 }
 
 std::string Parser::parseFunctionTypeString() {
@@ -225,6 +279,18 @@ ast::StructDecl Parser::parseStructDecl() {
     std::string name = current().text;
     advance();
 
+    std::vector<std::string> typeParams;
+    if (current().kind == TokenKind::Less) {
+        advance();
+        while (current().kind != TokenKind::Greater) {
+            if (current().kind != TokenKind::Identifier) error("expected type parameter name");
+            typeParams.push_back(current().text);
+            advance();
+            if (current().kind == TokenKind::Comma) advance();
+        }
+        expect(TokenKind::Greater);
+    }
+
     skipNewlines();
     expect(TokenKind::LeftBrace);
     skipNewlines();
@@ -244,7 +310,7 @@ ast::StructDecl Parser::parseStructDecl() {
     expect(TokenKind::RightBrace);
     skipNewlines();
 
-    return ast::StructDecl{name, fields};
+    return ast::StructDecl{name, typeParams, fields};
 }
 
 ast::Statement Parser::parseStatement() {
@@ -806,6 +872,10 @@ ast::Expression Parser::parsePrimary() {
         case TokenKind::Identifier: {
             std::string name = current().text;
             advance();
+
+            if (current().kind == TokenKind::Less && looksLikeGenericArgsHead()) {
+                name += parseGenericArgsString();
+            }
 
             if (current().kind == TokenKind::Dot) {
                 advance();

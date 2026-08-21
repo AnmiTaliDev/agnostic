@@ -90,6 +90,7 @@ expect_llvm_run bubble_sort "examples/bubble_sort.agn" "$(printf '1\n2\n3\n4\n5\
 expect_llvm_run strings_demo "examples/strings_demo.agn" "$(printf 'Hello, Agnostic!\n16\n-1\n1\n0\n1\n0')"
 expect_llvm_run fibonacci "examples/fibonacci.agn" \
     "$(printf '0\n1\n1\n2\n3\n5\n8\n13\n21\n34\n55\n89\n144\n233\n377')"
+expect_llvm_run generics "examples/generics.agn" "$(printf '1\n5\n0\ndivide by zero\n1\n3\n0')"
 
 expect_gcc_run closures "examples/closures.agn" "$(printf '1\n2\n3\n42')"
 expect_gcc_run structs "examples/structs.agn" "$(printf '25\n4\n5\n10')"
@@ -103,6 +104,7 @@ expect_gcc_run bubble_sort "examples/bubble_sort.agn" "$(printf '1\n2\n3\n4\n5\n
 expect_gcc_run strings_demo "examples/strings_demo.agn" "$(printf 'Hello, Agnostic!\n16\n-1\n1\n0\n1\n0')"
 expect_gcc_run fibonacci "examples/fibonacci.agn" \
     "$(printf '0\n1\n1\n2\n3\n5\n8\n13\n21\n34\n55\n89\n144\n233\n377')"
+expect_gcc_run generics "examples/generics.agn" "$(printf '1\n5\n0\ndivide by zero\n1\n3\n0')"
 
 expect_nvm_compile closures "examples/closures.agn" no            # function values/closures unsupported
 expect_nvm_compile structs "examples/structs.agn" yes
@@ -115,6 +117,7 @@ expect_nvm_compile bubble_sort "examples/bubble_sort.agn" yes
 expect_nvm_compile strings_demo "examples/strings_demo.agn" yes
 expect_nvm_compile fibonacci "examples/fibonacci.agn" yes
 expect_nvm_compile strings_runtime "scripts/testdata/strings_runtime_test.agn" no   # ++ concat unsupported
+expect_nvm_compile generics "examples/generics.agn" yes
 
 expect_llvm_run math_stdlib "scripts/testdata/math_test.agn" \
     "$(printf '7\n3\n1024\n9\n6\n12\n120\n1\n0\n10\n55\n1\n0\n55')"
@@ -149,6 +152,7 @@ expect_freebsd_compile primes "examples/primes.agn"
 expect_freebsd_compile bubble_sort "examples/bubble_sort.agn"
 expect_freebsd_compile strings_demo "examples/strings_demo.agn"
 expect_freebsd_compile fibonacci "examples/fibonacci.agn"
+expect_freebsd_compile generics "examples/generics.agn"
 expect_freebsd_compile math_stdlib "scripts/testdata/math_test.agn"
 expect_freebsd_compile strings_runtime "scripts/testdata/strings_runtime_test.agn"
 expect_freebsd_compile string_stdlib "scripts/testdata/string_test.agn"

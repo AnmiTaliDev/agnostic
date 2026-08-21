@@ -5,6 +5,7 @@
 #include "backend/llvm/codegen.hpp"
 #include "backend/nvm/codegen.hpp"
 #include "lexer/lexer.hpp"
+#include "parser/monomorphize.hpp"
 #include "parser/parser.hpp"
 #include "parser/typechecker.hpp"
 #include "misc/diagnostic.hpp"
@@ -157,8 +158,15 @@ int main(int argc, char** argv) {
     std::string source = readFile(sourceFile);
     agn::ast::Program program = parseSource(source, sourceFile);
 
+    program.structs.push_back(agn::ast::StructDecl{
+        "Result", {"T", "E"}, {{"ok", "int"}, {"value", "T"}, {"err", "E"}}});
+    program.structs.push_back(
+        agn::ast::StructDecl{"Option", {"T"}, {{"some", "int"}, {"value", "T"}}});
+
     std::set<std::string> loaded;
     loadModules(program, sourceDir, exeDir, loaded);
+
+    agn::parser::monomorphizeGenerics(program);
 
     agn::parser::TypeChecker checker(targetOs, "x86_64", memMode);
     if (!checker.checkProgram(program)) {

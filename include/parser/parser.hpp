@@ -62,6 +62,9 @@ private:
 
     std::optional<std::string> tryParseType();
     std::string parseFunctionTypeString();
+    std::string parseGenericArgsString();
+    void consumeClosingAngle();
+    bool looksLikeGenericArgsHead() const;
 
     std::vector<lexer::Token> tokens_;
     size_t position_ = 0;

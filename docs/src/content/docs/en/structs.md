@@ -78,3 +78,45 @@ var a Vector2 = Vector2{x: 3, y: 4}
 a.x = 10
 stdio.Println(a.x)
 ```
+
+## Generic structs
+
+Structs can take type parameters, resolved at compile time by monomorphization: each distinct
+combination of type arguments used in the program (`Result<int,string>`, `Result<int,bool>`, ...)
+generates its own concrete struct behind the scenes. There are no generic functions and no pattern
+matching — just generic struct declarations and instantiations.
+
+```agn
+struct Pair<A, B> {
+    first A
+    second B
+}
+
+var p Pair<int,string> = Pair<int,string>{first: 1, second: "one"}
+stdio.Println(p.first)
+stdio.PrintlnStr(p.second)
+```
+
+The compiler predefines two generic structs, always in scope without an import: `Result<T,E>`
+(`ok int`, `value T`, `err E`) and `Option<T>` (`some int`, `value T`) — used for functions where a
+plain `int` sentinel return isn't precise enough. Since the language has no boolean literals
+(booleans are represented as `int` 0/1 everywhere, matching the rest of the standard library),
+`ok`/`some` are `int`, not `bool`.
+
+```agn
+func safeDivide(a int, b int) Result<int,string> {
+    if b == 0 {
+        return Result<int,string>{ok: 0, value: 0, err: "divide by zero"}
+    }
+    return Result<int,string>{ok: 1, value: a / b, err: ""}
+}
+
+var r Result<int,string> = safeDivide(10, 0)
+if r.ok == 0 {
+    stdio.PrintlnStr(r.err)
+}
+```
+
+As with any struct, assign the result to a local variable before accessing its fields — `.field`
+access on a call result or a chained `.field.field` isn't supported (see [Field access and
+assignment](#field-access-and-assignment) above).

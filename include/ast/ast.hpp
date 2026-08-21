@@ -190,6 +190,7 @@ struct Function {
 
 struct StructDecl {
     std::string name;
+    std::vector<std::string> typeParams;
     std::vector<Parameter> fields;
 };
 
