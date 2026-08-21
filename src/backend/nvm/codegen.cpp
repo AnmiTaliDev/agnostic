@@ -122,7 +122,7 @@ std::vector<uint8_t> NVMCodeGen::generate(ast::Program& program) {
     }
 
     for (auto& [modName, mod] : program.modules) {
-        if (modName == "stdio") continue;
+        if (modName == "stdio" || modName == "os") continue;
         for (auto& f : mod.functions) {
             if (!f.isExported) continue;
             currentModulePrefix_ = modName;
@@ -765,6 +765,16 @@ void NVMCodeGen::generateMethodCall(ast::MethodCallExpr& expr) {
     if (object == "novaria") {
         generateNovariaCall(member, args);
         return;
+    }
+    if (object == "os") {
+        std::fprintf(stderr, "error: the 'os' module (file I/O, command-line arguments) is not supported by the nvm backend, use 'novaria' instead\n");
+        std::exit(1);
+    }
+    if (object == "string" &&
+        (member == "indexOf" || member == "contains" || member == "startsWith" || member == "endsWith" ||
+         member == "charAt" || member == "substr" || member == "toUpper" || member == "toLower")) {
+        std::fprintf(stderr, "error: 'string.%s' is not supported by the nvm backend\n", member.c_str());
+        std::exit(1);
     }
 
     if (expr.kind == ast::MethodCallKind::StructField) {

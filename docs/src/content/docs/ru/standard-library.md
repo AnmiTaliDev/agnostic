@@ -1,6 +1,6 @@
 ---
 title: Стандартная библиотека
-description: stdio, math, string и novaria.
+description: stdio, math, string, os и novaria.
 ---
 
 Каждая функция в этих модулях — интринсик компилятора: тело, написанное в исходнике `.agn`, существует только для того, чтобы файл проходил проверку типов и чтобы человек, читающий его, видел сигнатуру. Реальное поведение генерируется напрямую бэкендом компилятора, а не выполнением этого тела. `ReadInt`, `ReadChar`, `ReadLine`, интерполяция шаблонных строк и `++` — исключения, оговорённые ниже, где заявленное в исходнике поведение не выполняется под `--backend=nvm`.
@@ -52,8 +52,33 @@ description: stdio, math, string и novaria.
 | `compare` | `(s1 string, s2 string) int` | 0, если равны, -1, если `s1 < s2`, 1, если `s1 > s2` |
 | `concat` | `(s1 string, s2 string) string` | |
 | `is_empty` | `(s string) int` | 1 или 0 |
+| `indexOf` | `(s string, sub string) int` | индекс первого вхождения `sub`, или -1 |
+| `contains` | `(s string, sub string) int` | 1 или 0 |
+| `startsWith` | `(s string, prefix string) int` | 1 или 0 |
+| `endsWith` | `(s string, suffix string) int` | 1 или 0 |
+| `charAt` | `(s string, index int) int` | код байта по `index`, или -1 вне границ |
+| `substr` | `(s string, start int, len int) string` | обрезается по границам строки |
+| `toUpper` | `(s string) string` | только ASCII |
+| `toLower` | `(s string) string` | только ASCII |
 
-`++` и интерполяция `$(...)` (см. [Синтаксис](/ru/syntax/)) для простых случаев покрывают то же самое, что и `concat`; `string.concat` — единственный способ строить строки под `--backend=nvm`, где `++` и шаблонные строки — ошибки компиляции.
+`++` и интерполяция `$(...)` (см. [Синтаксис](/ru/syntax/)) для простых случаев покрывают то же самое, что и `concat`; `string.concat` — единственный способ строить строки под `--backend=nvm`, где `++` и шаблонные строки — ошибки компиляции. `indexOf`, `contains`, `startsWith`, `endsWith`, `charAt`, `substr`, `toUpper` и `toLower` — тоже ошибки компиляции под `--backend=nvm`.
+
+## os
+
+Файловые дескрипторы и аргументы командной строки. Ошибки компиляции под `--backend=nvm`; там используйте `novaria`.
+
+| Функция | Сигнатура | Примечания |
+|---|---|---|
+| `ArgCount` | `() int` | число аргументов командной строки, включая argv[0] (путь к программе) |
+| `Arg` | `(index int) string` | аргумент по `index` |
+| `OpenRead` | `(path string) int` | файловый дескриптор или отрицательное число при ошибке |
+| `OpenCreate` | `(path string) int` | создать/обрезать для записи, дескриптор или отрицательное число при ошибке |
+| `Close` | `(fd int) int` | |
+| `ReadFd` | `(fd int, buffer int, maxlen int) int` | читает в адрес буфера в куче, как `stdio.ReadLine`; возвращает число прочитанных байт или отрицательное при ошибке |
+| `WriteFd` | `(fd int, data string) int` | число записанных байт или отрицательное при ошибке |
+| `Exit` | `(code int)` | немедленно завершает процесс, не выполняя оставшийся код вызывающей функции |
+
+Параметр `buffer` у `ReadFd` (и у `stdio.ReadLine`) типизирован как `int`, но принимает указатель, полученный через `&arr`, напрямую — значение-указатель, присваиваемое параметру `int`, приводится к своему адресу.
 
 ## novaria
 

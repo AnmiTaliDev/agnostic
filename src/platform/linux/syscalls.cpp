@@ -8,9 +8,14 @@ namespace {
 
 constexpr long SYS_read = 0;
 constexpr long SYS_write = 1;
+constexpr long SYS_open = 2;
+constexpr long SYS_close = 3;
 constexpr long SYS_mmap = 9;
 constexpr long SYS_munmap = 11;
 constexpr long SYS_exit_group = 231;
+constexpr long O_RDONLY = 0;
+constexpr long O_WRONLY_CREAT_TRUNC = 0x1 | 0x40 | 0x200;
+constexpr long CREATE_MODE_0644 = 0644;
 
 inline long syscall3(long n, long a1, long a2, long a3) {
     long ret;
@@ -62,6 +67,28 @@ void* mapAnonymous(unsigned long size) {
 
 void unmap(void* ptr, unsigned long size) {
     syscall3(SYS_munmap, reinterpret_cast<long>(ptr), static_cast<long>(size), 0);
+}
+
+long openRead(const char* path) {
+    return syscall3(SYS_open, reinterpret_cast<long>(path), O_RDONLY, 0);
+}
+
+long openCreate(const char* path) {
+    return syscall3(SYS_open, reinterpret_cast<long>(path), O_WRONLY_CREAT_TRUNC, CREATE_MODE_0644);
+}
+
+long closeFd(int fd) {
+    return syscall3(SYS_close, fd, 0, 0);
+}
+
+extern "C" long agn_argc;
+extern "C" const char** agn_argv;
+
+long argCount() { return agn_argc; }
+
+const char* argAt(long index) {
+    if (index < 0 || index >= agn_argc) return nullptr;
+    return agn_argv[index];
 }
 
 } // namespace agn::platform

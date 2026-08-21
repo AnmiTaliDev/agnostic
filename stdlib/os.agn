@@ -1,0 +1,38 @@
+package os
+
+pub fn ArgCount() int {
+    return 0
+}
+
+// index 0 is the program path
+pub fn Arg(index int) string {
+    return ""
+}
+
+// returns a file descriptor, or negative on error
+pub fn OpenRead(path string) int {
+    return 0
+}
+
+// truncates if the file exists; returns a file descriptor, or negative on error
+pub fn OpenCreate(path string) int {
+    return 0
+}
+
+pub fn Close(fd int) int {
+    return 0
+}
+
+// returns bytes read, or negative on error
+pub fn ReadFd(fd int, buffer int, maxlen int) int {
+    return 0
+}
+
+// returns bytes written, or negative on error
+pub fn WriteFd(fd int, data string) int {
+    return 0
+}
+
+pub fn Exit(code int) {
+    return
+}

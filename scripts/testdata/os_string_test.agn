@@ -1,0 +1,35 @@
+package main
+
+import "os"
+import "string"
+import "stdio"
+
+func main() {
+    stdio.PrintlnStr(string.toUpper("hello"))
+    stdio.PrintlnStr(string.toLower("WORLD"))
+    stdio.Println(string.indexOf("hello world", "world"))
+    stdio.Println(string.indexOf("hello world", "xyz"))
+    stdio.Println(string.contains("hello world", "lo wo"))
+    stdio.Println(string.contains("hello world", "xyz"))
+    stdio.Println(string.startsWith("hello", "he"))
+    stdio.Println(string.startsWith("hello", "lo"))
+    stdio.Println(string.endsWith("hello", "lo"))
+    stdio.Println(string.endsWith("hello", "he"))
+    stdio.Println(string.charAt("hello", 1))
+    stdio.PrintlnStr(string.substr("hello world", 6, 5))
+
+    var trueArgCount int = 1
+    if os.ArgCount() >= trueArgCount {
+        stdio.PrintlnStr("argcount_ok")
+    }
+
+    var fd int = os.OpenCreate("/tmp/agn_os_string_test.txt")
+    os.WriteFd(fd, "roundtrip")
+    os.Close(fd)
+
+    var rfd int = os.OpenRead("/tmp/agn_os_string_test.txt")
+    var buf [16]int
+    var n int = os.ReadFd(rfd, &buf, 15)
+    os.Close(rfd)
+    stdio.Println(n)
+}

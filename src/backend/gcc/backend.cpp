@@ -394,7 +394,7 @@ struct GccBackend::Impl {
         }
 
         for (auto& [modName, module] : program.modules) {
-            if (modName == "stdio") continue;
+            if (modName == "stdio" || modName == "os") continue;
             for (auto& f : module.functions) {
                 if (!f.isExported) continue;
                 std::string key = modName + "." + f.name;
@@ -412,7 +412,7 @@ struct GccBackend::Impl {
     void defineAllFunctionBodies(ast::Program& program) {
         for (auto& f : program.functions) defineFunction(f, "");
         for (auto& [modName, module] : program.modules) {
-            if (modName == "stdio") continue;
+            if (modName == "stdio" || modName == "os") continue;
             for (auto& f : module.functions) {
                 if (f.isExported) defineFunction(f, modName);
             }
@@ -622,6 +622,11 @@ struct GccBackend::Impl {
         return materialize(gcc_jit_context_new_cast(ctxt, loc, v.value, i64Ty), i64Ty);
     }
 
+    gcc_jit_rvalue* toBufferPtr(const TypedValue& v) {
+        if (v.type.kind == TypeKind::Ptr) return v.value;
+        return bitcast(toI64(v), ptrTy);
+    }
+
     TypedValue genStdioCall(const std::string& member, std::vector<ast::Expression>& args) {
         if (member == "Print" || member == "Println") {
             auto val = genExpr(args[0]);
@@ -653,7 +658,7 @@ struct GccBackend::Impl {
         if (member == "ReadLine") {
             auto bufVal = genExpr(args[0]);
             auto lenVal = genExpr(args[1]);
-            auto* bufPtr = bitcast(toI64(bufVal), ptrTy);
+            auto* bufPtr = toBufferPtr(bufVal);
             return TypedValue{callRt("agn_rt_read_line", i64Ty, {ptrTy, i64Ty}, {bufPtr, toI64(lenVal)}), Type{TypeKind::I64}};
         }
         if (member == "Flush") {
@@ -676,6 +681,82 @@ struct GccBackend::Impl {
             auto s1 = genExpr(args[0]).value;
             auto s2 = genExpr(args[1]).value;
             return genConcatValues(s1, s2);
+        }
+        if (member == "indexOf") {
+            return TypedValue{callRt("agn_rt_index_of", i64Ty, {ptrTy, ptrTy},
+                                      {genExpr(args[0]).value, genExpr(args[1]).value}),
+                               Type{TypeKind::I64}};
+        }
+        if (member == "contains") {
+            return TypedValue{callRt("agn_rt_contains", i64Ty, {ptrTy, ptrTy},
+                                      {genExpr(args[0]).value, genExpr(args[1]).value}),
+                               Type{TypeKind::I64}};
+        }
+        if (member == "startsWith") {
+            return TypedValue{callRt("agn_rt_starts_with", i64Ty, {ptrTy, ptrTy},
+                                      {genExpr(args[0]).value, genExpr(args[1]).value}),
+                               Type{TypeKind::I64}};
+        }
+        if (member == "endsWith") {
+            return TypedValue{callRt("agn_rt_ends_with", i64Ty, {ptrTy, ptrTy},
+                                      {genExpr(args[0]).value, genExpr(args[1]).value}),
+                               Type{TypeKind::I64}};
+        }
+        if (member == "charAt") {
+            return TypedValue{callRt("agn_rt_char_at", i64Ty, {ptrTy, i64Ty},
+                                      {genExpr(args[0]).value, toI64(genExpr(args[1]))}),
+                               Type{TypeKind::I64}};
+        }
+        if (member == "substr") {
+            return TypedValue{callRt("agn_rt_substr", ptrTy, {ptrTy, i64Ty, i64Ty},
+                                      {genExpr(args[0]).value, toI64(genExpr(args[1])), toI64(genExpr(args[2]))}),
+                               Type{TypeKind::String}};
+        }
+        if (member == "toUpper") {
+            return TypedValue{callRt("agn_rt_to_upper", ptrTy, {ptrTy}, {genExpr(args[0]).value}),
+                               Type{TypeKind::String}};
+        }
+        if (member == "toLower") {
+            return TypedValue{callRt("agn_rt_to_lower", ptrTy, {ptrTy}, {genExpr(args[0]).value}),
+                               Type{TypeKind::String}};
+        }
+        return TypedValue{constI64(0), Type{TypeKind::Unknown}};
+    }
+
+    TypedValue genOsCall(const std::string& member, std::vector<ast::Expression>& args) {
+        if (member == "ArgCount") {
+            return TypedValue{callRt("agn_rt_argc", i64Ty, {}, {}), Type{TypeKind::I64}};
+        }
+        if (member == "Arg") {
+            return TypedValue{callRt("agn_rt_argv", ptrTy, {i64Ty}, {toI64(genExpr(args[0]))}), Type{TypeKind::String}};
+        }
+        if (member == "OpenRead") {
+            return TypedValue{callRt("agn_rt_open_read", i64Ty, {ptrTy}, {genExpr(args[0]).value}), Type{TypeKind::I64}};
+        }
+        if (member == "OpenCreate") {
+            return TypedValue{callRt("agn_rt_open_create", i64Ty, {ptrTy}, {genExpr(args[0]).value}), Type{TypeKind::I64}};
+        }
+        if (member == "Close") {
+            return TypedValue{callRt("agn_rt_close", i64Ty, {i64Ty}, {toI64(genExpr(args[0]))}), Type{TypeKind::I64}};
+        }
+        if (member == "ReadFd") {
+            auto bufVal = genExpr(args[1]);
+            auto* bufPtr = toBufferPtr(bufVal);
+            return TypedValue{callRt("agn_rt_read_fd", i64Ty, {i64Ty, ptrTy, i64Ty},
+                                      {toI64(genExpr(args[0])), bufPtr, toI64(genExpr(args[2]))}),
+                               Type{TypeKind::I64}};
+        }
+        if (member == "WriteFd") {
+            auto* data = genExpr(args[1]).value;
+            auto* len = callRt("agn_rt_strlen", i64Ty, {ptrTy}, {data});
+            return TypedValue{callRt("agn_rt_write_fd", i64Ty, {i64Ty, ptrTy, i64Ty},
+                                      {toI64(genExpr(args[0])), data, len}),
+                               Type{TypeKind::I64}};
+        }
+        if (member == "Exit") {
+            callRt("agn_rt_exit", voidTy, {i64Ty}, {toI64(genExpr(args[0]))});
+            emitDefaultReturn();
+            return TypedValue{constI64(0), Type{TypeKind::Void}};
         }
         return TypedValue{constI64(0), Type{TypeKind::Unknown}};
     }
@@ -923,7 +1004,10 @@ struct GccBackend::Impl {
     }
 
     TypedValue genCall(const std::string& name, std::vector<ast::Expression>& argExprs) {
-        if (currentModulePrefix == "string" && (name == "len" || name == "compare" || name == "concat")) {
+        if (currentModulePrefix == "string" &&
+            (name == "len" || name == "compare" || name == "concat" || name == "indexOf" ||
+             name == "contains" || name == "startsWith" || name == "endsWith" || name == "charAt" ||
+             name == "substr" || name == "toUpper" || name == "toLower")) {
             return genStringCall(name, argExprs);
         }
 
@@ -977,8 +1061,12 @@ struct GccBackend::Impl {
 
     TypedValue genMethodCall(ast::MethodCallExpr& expr) {
         if (expr.object == "stdio") return genStdioCall(expr.member, expr.args);
+        if (expr.object == "os") return genOsCall(expr.member, expr.args);
         if (expr.object == "string" &&
-            (expr.member == "len" || expr.member == "compare" || expr.member == "concat")) {
+            (expr.member == "len" || expr.member == "compare" || expr.member == "concat" ||
+             expr.member == "indexOf" || expr.member == "contains" || expr.member == "startsWith" ||
+             expr.member == "endsWith" || expr.member == "charAt" || expr.member == "substr" ||
+             expr.member == "toUpper" || expr.member == "toLower")) {
             return genStringCall(expr.member, expr.args);
         }
 

@@ -1,6 +1,6 @@
 ---
 title: Standard Library
-description: stdio, math, string, and novaria.
+description: stdio, math, string, os, and novaria.
 ---
 
 Every function in these modules is a compiler intrinsic: the body written in the `.agn` source exists only so the file type-checks and so a human reading it can see the signature. The actual behavior is generated directly by the compiler backend, not by running that body. `ReadInt`, `ReadChar`, `ReadLine`, template string interpolation, and `++` are the exceptions called out below where the source body's stated behavior does not hold under `--backend=nvm`.
@@ -52,8 +52,33 @@ All functions take and return `int`.
 | `compare` | `(s1 string, s2 string) int` | 0 if equal, -1 if `s1 < s2`, 1 if `s1 > s2` |
 | `concat` | `(s1 string, s2 string) string` | |
 | `is_empty` | `(s string) int` | 1 or 0 |
+| `indexOf` | `(s string, sub string) int` | index of the first occurrence of `sub`, or -1 |
+| `contains` | `(s string, sub string) int` | 1 or 0 |
+| `startsWith` | `(s string, prefix string) int` | 1 or 0 |
+| `endsWith` | `(s string, suffix string) int` | 1 or 0 |
+| `charAt` | `(s string, index int) int` | byte code at `index`, or -1 if out of bounds |
+| `substr` | `(s string, start int, len int) string` | clamped to the string's bounds |
+| `toUpper` | `(s string) string` | ASCII only |
+| `toLower` | `(s string) string` | ASCII only |
 
-`++` and `$(...)` template string interpolation (see [Syntax](/en/syntax/)) cover the same ground as `concat` for simple cases; `string.concat` is the only string-building option available under `--backend=nvm`, where `++` and template strings are compile errors.
+`++` and `$(...)` template string interpolation (see [Syntax](/en/syntax/)) cover the same ground as `concat` for simple cases; `string.concat` is the only string-building option available under `--backend=nvm`, where `++` and template strings are compile errors. `indexOf`, `contains`, `startsWith`, `endsWith`, `charAt`, `substr`, `toUpper`, and `toLower` are compile errors under `--backend=nvm`.
+
+## os
+
+File descriptors and command-line arguments. Compile errors under `--backend=nvm`; use `novaria` there instead.
+
+| Function | Signature | Notes |
+|---|---|---|
+| `ArgCount` | `() int` | number of command-line arguments, including argv[0] (the program path) |
+| `Arg` | `(index int) string` | argument at `index` |
+| `OpenRead` | `(path string) int` | file descriptor, or negative on error |
+| `OpenCreate` | `(path string) int` | create/truncate for writing, file descriptor or negative on error |
+| `Close` | `(fd int) int` | |
+| `ReadFd` | `(fd int, buffer int, maxlen int) int` | reads into a heap buffer address, like `stdio.ReadLine`; returns bytes read or negative on error |
+| `WriteFd` | `(fd int, data string) int` | bytes written, or negative on error |
+| `Exit` | `(code int)` | terminates the process immediately, bypassing any remaining code in the caller |
+
+`ReadFd`'s (and `stdio.ReadLine`'s) `buffer` parameter is typed `int` but accepts the pointer produced by `&arr` directly — a pointer value assigned to an `int` parameter decays to its address.
 
 ## novaria
 
