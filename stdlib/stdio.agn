@@ -1,49 +1,38 @@
 package stdio
 
-// Standard I/O library for Agnostic
-
-// Print an integer without newline
 pub fn Print(value int) {
     return
 }
 
-// Print an integer with newline
 pub fn Println(value int) {
     return
 }
 
-// Print a string without newline
 pub fn PrintStr(text string) {
     return
 }
 
-// Print a string with newline
 pub fn PrintlnStr(text string) {
     return
 }
 
-// Print a character
 pub fn PrintChar(ch int) {
     return
 }
 
-// Read an integer from stdin
 pub fn ReadInt() int {
     return 0
 }
 
-// Read a single character from stdin
 pub fn ReadChar() int {
     return 0
 }
 
-// Read a line from stdin (returns buffer address)
+// returns bytes read
 pub fn ReadLine(buffer int, maxlen int) int {
-    // Returns number of characters read
     return 0
 }
 
-// Flush output buffer
 pub fn Flush() {
     return
 }

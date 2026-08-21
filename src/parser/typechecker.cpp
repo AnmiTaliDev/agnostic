@@ -42,6 +42,7 @@ bool Type::operator==(const Type& other) const {
 bool Type::canAssignTo(const Type& other) const {
     if (*this == other) return true;
     if (isNumeric() && other.isNumeric()) return true;
+    if (kind == TypeKind::Ptr && other.isNumeric()) return true;
     if (kind == TypeKind::Unknown || other.kind == TypeKind::Unknown) return true;
     return false;
 }

@@ -1,30 +1,58 @@
 package string
 
-// String utilities library
-
-// Get the length of a string
 pub fn len(s string) int {
-    // Implemented in compiler
     return 0
 }
 
-// Compare two strings
-// Returns: 0 if equal, -1 if s1 < s2, 1 if s1 > s2
+// 0 if equal, -1 if s1 < s2, 1 if s1 > s2
 pub fn compare(s1 string, s2 string) int {
-    // Implemented in compiler
     return 0
 }
 
-// Concatenate two strings
 pub fn concat(s1 string, s2 string) string {
-    // Implemented in compiler
     return ""
 }
 
-// Check if string is empty
 pub fn is_empty(s string) int {
     if len(s) == 0 {
         return 1
     }
     return 0
+}
+
+// -1 if not found
+pub fn indexOf(s string, sub string) int {
+    return 0
+}
+
+pub fn contains(s string, sub string) int {
+    return 0
+}
+
+pub fn startsWith(s string, prefix string) int {
+    return 0
+}
+
+pub fn endsWith(s string, suffix string) int {
+    return 0
+}
+
+// -1 if out of bounds
+pub fn charAt(s string, index int) int {
+    return 0
+}
+
+// clamped to the string's bounds
+pub fn substr(s string, start int, len int) string {
+    return ""
+}
+
+// ASCII only
+pub fn toUpper(s string) string {
+    return ""
+}
+
+// ASCII only
+pub fn toLower(s string) string {
+    return ""
 }
