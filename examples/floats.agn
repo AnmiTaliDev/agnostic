@@ -1,0 +1,34 @@
+package main
+
+import "stdio"
+
+func circleArea(radius float) float {
+    var pi float = 3.14159
+    return pi * radius * radius
+}
+
+func average(a float, b float, c float) float {
+    return (a + b + c) / 3.0
+}
+
+func main() {
+    var r float = 2.0
+    stdio.Println(circleArea(r))
+
+    var x float = 1.5
+    var y float = 2.5
+    stdio.Println(x + y)
+    stdio.Println(x - y)
+    stdio.Println(x * y)
+    stdio.Println(x / y)
+    stdio.Println(-x)
+
+    if x < y {
+        stdio.PrintlnStr("x < y")
+    }
+
+    stdio.Println(average(1.0, 2.0, 3.0))
+
+    var n int = 4
+    stdio.Println(x + n)
+}

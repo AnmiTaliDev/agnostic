@@ -66,6 +66,7 @@ struct Codegen::Impl {
     llvm::Type* i8Ty;
     llvm::Type* i1Ty;
     llvm::Type* voidTy;
+    llvm::Type* doubleTy;
 
     std::unordered_map<std::string, llvm::StructType*> structTypes;
     std::unordered_map<std::string, llvm::Function*> functionTable;
@@ -91,6 +92,7 @@ struct Codegen::Impl {
         i8Ty = llvm::Type::getInt8Ty(ctx);
         i1Ty = llvm::Type::getInt1Ty(ctx);
         voidTy = llvm::Type::getVoidTy(ctx);
+        doubleTy = llvm::Type::getDoubleTy(ctx);
     }
 
     llvm::Type* llvmType(const Type& t) {
@@ -98,6 +100,7 @@ struct Codegen::Impl {
             case TypeKind::I64: case TypeKind::U64: return i64Ty;
             case TypeKind::I32: case TypeKind::U32: return i32Ty;
             case TypeKind::I8: case TypeKind::U8: return i8Ty;
+            case TypeKind::F64: return doubleTy;
             case TypeKind::Bool: return i1Ty;
             case TypeKind::Void: return voidTy;
             case TypeKind::String: return ptrTy;
@@ -132,6 +135,19 @@ struct Codegen::Impl {
         if (v.type.kind == TypeKind::Bool && isIntKind(target.kind)) {
             return builder.CreateZExt(v.value, llvmType(target));
         }
+        if (target.kind == TypeKind::F64) {
+            if (v.type.kind == TypeKind::F64) return v.value;
+            if (v.type.kind == TypeKind::Bool) return builder.CreateUIToFP(v.value, doubleTy);
+            if (isIntKind(v.type.kind)) {
+                return isUnsignedType(v.type) ? builder.CreateUIToFP(v.value, doubleTy)
+                                               : builder.CreateSIToFP(v.value, doubleTy);
+            }
+            return v.value;
+        }
+        if (isIntKind(target.kind) && v.type.kind == TypeKind::F64) {
+            return isUnsignedType(target) ? builder.CreateFPToUI(v.value, llvmType(target))
+                                           : builder.CreateFPToSI(v.value, llvmType(target));
+        }
         if (isIntKind(target.kind) && isIntKind(v.type.kind)) {
             auto* from = llvmType(v.type);
             auto* to = llvmType(target);
@@ -156,6 +172,7 @@ struct Codegen::Impl {
 
     llvm::Value* toI64(const TypedValue& v) {
         if (v.type.kind == TypeKind::Bool) return builder.CreateZExt(v.value, i64Ty);
+        if (v.type.kind == TypeKind::F64) return builder.CreateFPToSI(v.value, i64Ty);
         if (!isIntKind(v.type.kind)) return v.value;
         auto* from = llvmType(v.type);
         if (from == i64Ty) return v.value;
@@ -564,6 +581,9 @@ struct Codegen::Impl {
             auto val = genExpr(args[0]);
             if (val.type.kind == TypeKind::String) {
                 rt(member == "Println" ? "agn_rt_println_str" : "agn_rt_print_str", voidTy, {ptrTy}, {val.value});
+            } else if (val.type.isFloat()) {
+                rt(member == "Println" ? "agn_rt_println_float" : "agn_rt_print_float", voidTy, {doubleTy},
+                   {coerceValue(val, Type{TypeKind::F64})});
             } else {
                 rt(member == "Println" ? "agn_rt_println_int" : "agn_rt_print_int", voidTy, {i64Ty}, {toI64(val)});
             }
@@ -814,6 +834,9 @@ struct Codegen::Impl {
         if (auto* n = std::get_if<ast::NumberExpr>(&expr.node)) {
             return TypedValue{llvm::ConstantInt::get(i64Ty, uint64_t(n->value), true), Type{TypeKind::I64}};
         }
+        if (auto* n = std::get_if<ast::FloatExpr>(&expr.node)) {
+            return TypedValue{llvm::ConstantFP::get(doubleTy, n->value), Type{TypeKind::F64}};
+        }
         if (auto* n = std::get_if<ast::StringExpr>(&expr.node)) {
             return TypedValue{getStringLiteral(n->value), Type{TypeKind::String}};
         }
@@ -840,6 +863,27 @@ struct Codegen::Impl {
             }
             auto l = genExpr(*n->left);
             auto r = genExpr(*n->right);
+
+            if (l.type.isFloat() || r.type.isFloat()) {
+                llvm::Value* lv = coerceValue(l, Type{TypeKind::F64});
+                llvm::Value* rv = coerceValue(r, Type{TypeKind::F64});
+                switch (n->op) {
+                    case ast::BinaryOp::Add: return TypedValue{builder.CreateFAdd(lv, rv), Type{TypeKind::F64}};
+                    case ast::BinaryOp::Sub: return TypedValue{builder.CreateFSub(lv, rv), Type{TypeKind::F64}};
+                    case ast::BinaryOp::Mul: return TypedValue{builder.CreateFMul(lv, rv), Type{TypeKind::F64}};
+                    case ast::BinaryOp::Div: return TypedValue{builder.CreateFDiv(lv, rv), Type{TypeKind::F64}};
+                    case ast::BinaryOp::Equal: return TypedValue{builder.CreateFCmpOEQ(lv, rv), Type{TypeKind::Bool}};
+                    case ast::BinaryOp::NotEqual: return TypedValue{builder.CreateFCmpONE(lv, rv), Type{TypeKind::Bool}};
+                    case ast::BinaryOp::Less: return TypedValue{builder.CreateFCmpOLT(lv, rv), Type{TypeKind::Bool}};
+                    case ast::BinaryOp::LessEqual: return TypedValue{builder.CreateFCmpOLE(lv, rv), Type{TypeKind::Bool}};
+                    case ast::BinaryOp::Greater: return TypedValue{builder.CreateFCmpOGT(lv, rv), Type{TypeKind::Bool}};
+                    case ast::BinaryOp::GreaterEqual:
+                        return TypedValue{builder.CreateFCmpOGE(lv, rv), Type{TypeKind::Bool}};
+                    default:
+                        return TypedValue{lv, Type{TypeKind::F64}};
+                }
+            }
+
             bool bothUnsigned = isUnsignedType(l.type) && isUnsignedType(r.type);
 
             llvm::Type* wide = llvmType(l.type);
@@ -899,6 +943,7 @@ struct Codegen::Impl {
         if (auto* n = std::get_if<ast::UnaryExpr>(&expr.node)) {
             auto v = genExpr(*n->operand);
             if (n->op == ast::UnaryOp::Neg) {
+                if (v.type.isFloat()) return TypedValue{builder.CreateFNeg(v.value), v.type};
                 return TypedValue{builder.CreateNeg(v.value), v.type};
             }
             return TypedValue{builder.CreateNot(toCond(v)), Type{TypeKind::Bool}};

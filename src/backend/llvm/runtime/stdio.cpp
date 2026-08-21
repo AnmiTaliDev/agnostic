@@ -77,6 +77,38 @@ extern "C" unsigned long agn_rt_format_hex(char* buf, unsigned long value, long 
     return static_cast<unsigned long>(out);
 }
 
+extern "C" unsigned long agn_rt_format_float(char* buf, double value, long precision) {
+    if (precision < 0) precision = 6;
+    bool neg = value < 0;
+    double v = neg ? -value : value;
+
+    long long divisor = 1;
+    for (long i = 0; i < precision; i++) divisor *= 10;
+    long long scaled = static_cast<long long>(v * static_cast<double>(divisor) + 0.5);
+    long long intPart = precision > 0 ? scaled / divisor : scaled;
+    long long fracPart = precision > 0 ? scaled % divisor : 0;
+
+    unsigned long out = 0;
+    if (neg) buf[out++] = '-';
+    out += agn_rt_format_int(buf + out, intPart, 0, 0);
+    if (precision > 0) {
+        buf[out++] = '.';
+        out += agn_rt_format_int(buf + out, fracPart, precision, 1);
+    }
+    return out;
+}
+
+extern "C" void agn_rt_print_float(double value) {
+    char buf[48];
+    unsigned long len = agn_rt_format_float(buf, value, 6);
+    writeAll(buf, len);
+}
+
+extern "C" void agn_rt_println_float(double value) {
+    agn_rt_print_float(value);
+    writeAll("\n", 1);
+}
+
 extern "C" void agn_rt_print_int(long value) {
     char buf[32];
     unsigned long len = agn_rt_format_int(buf, value, 0, 0);

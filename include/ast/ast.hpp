@@ -51,6 +51,7 @@ struct TemplateExprPart {
 using TemplateStringPart = std::variant<TemplateLiteralPart, TemplateExprPart>;
 
 struct NumberExpr { int64_t value; };
+struct FloatExpr { double value; };
 struct StringExpr { std::string value; };
 struct TemplateStringExpr { std::vector<TemplateStringPart> parts; };
 struct IdentifierExpr { std::string name; };
@@ -115,7 +116,7 @@ struct StructLiteralExpr {
 
 struct Expression {
     std::variant<
-        NumberExpr, StringExpr, TemplateStringExpr, IdentifierExpr,
+        NumberExpr, FloatExpr, StringExpr, TemplateStringExpr, IdentifierExpr,
         BinaryExpr, UnaryExpr, CallExpr, MethodCallExpr, ArrayAccessExpr,
         StringIndexExpr, AddressOfExpr, DerefExpr, EvalExpr, FieldAccessExpr,
         FunctionLiteralExpr, StructLiteralExpr> node;

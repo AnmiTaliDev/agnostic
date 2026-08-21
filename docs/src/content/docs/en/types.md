@@ -13,11 +13,20 @@ description: The Agnostic type system.
 | `u64` | 64-bit unsigned integer |
 | `u32` | 32-bit unsigned integer |
 | `u8` | 8-bit unsigned integer |
+| `f64` | 64-bit floating point |
 | `bool` | boolean |
 | `string` | string |
 | `int` | alias for `i64` |
+| `float` | alias for `f64` |
 
-There is no floating-point type. There is no `char` type; a byte read from a string index or `stdio.ReadChar` is an `int`.
+A literal with a `.` (`3.14`) is `f64`; a literal without one (`3`) is `i64`. Mixing `f64` and an
+integer in arithmetic (`3.14 + 2`) implicitly converts the integer operand to `f64` and the
+expression's type is `f64`; `%` and the bitwise/shift operators do not accept `f64` operands.
+`f64` is only supported under `--backend=llvm` and `--backend=gcc` — `--backend=nvm` rejects any
+use of `f64` at compile time, since its bytecode stack machine is 32-bit-integer-only throughout
+and there is no in-repo interpreter to verify a float encoding against.
+
+There is no `char` type; a byte read from a string index or `stdio.ReadChar` is an `int`.
 
 ## Type inference
 
@@ -61,4 +70,6 @@ Types are checked, not coerced across boundaries that would lose information sil
 
 ## Generics and pattern matching
 
-Neither exists. There is no way to write a function or struct generic over a type parameter, and there is no `match`/`switch` expression; branching is `if`/`else` only (see [Control Flow](/en/control-flow/)). Both are explicitly out of scope for the language as it stands.
+Generic *structs*, resolved at compile time by monomorphization, exist — see [Generic
+structs](/en/structs/#generic-structs). There are no generic *functions*, and there is no
+`match`/`switch` expression; branching is `if`/`else` only (see [Control Flow](/en/control-flow/)).

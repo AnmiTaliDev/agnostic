@@ -56,6 +56,7 @@ struct GccBackend::Impl {
     gcc_jit_type* u8Ty;
     gcc_jit_type* boolTy;
     gcc_jit_type* voidTy;
+    gcc_jit_type* doubleTy;
 
     std::unordered_map<std::string, gcc_jit_struct*> structTypes;
     std::unordered_map<std::string, gcc_jit_function*> functionTable;
@@ -91,6 +92,7 @@ struct GccBackend::Impl {
         u8Ty = gcc_jit_context_get_int_type(ctxt, 1, 0);
         boolTy = gcc_jit_context_get_type(ctxt, GCC_JIT_TYPE_BOOL);
         voidTy = gcc_jit_context_get_type(ctxt, GCC_JIT_TYPE_VOID);
+        doubleTy = gcc_jit_context_get_type(ctxt, GCC_JIT_TYPE_DOUBLE);
     }
 
     ~Impl() { gcc_jit_context_release(ctxt); }
@@ -103,6 +105,7 @@ struct GccBackend::Impl {
             case TypeKind::U32: return u32Ty;
             case TypeKind::I8: return i8Ty;
             case TypeKind::U8: return u8Ty;
+            case TypeKind::F64: return doubleTy;
             case TypeKind::Bool: return boolTy;
             case TypeKind::Void: return voidTy;
             case TypeKind::String: return ptrTy;
@@ -227,6 +230,8 @@ struct GccBackend::Impl {
         } else if (curReturnType.kind == TypeKind::Struct || curReturnType.kind == TypeKind::Array) {
             auto* tmp = gcc_jit_function_new_local(curFn, loc, gccType(curReturnType), "unreachable_ret");
             endWithReturn(gcc_jit_lvalue_as_rvalue(tmp));
+        } else if (curReturnType.kind == TypeKind::F64) {
+            endWithReturn(gcc_jit_context_new_rvalue_from_double(ctxt, doubleTy, 0.0));
         } else {
             endWithReturn(gcc_jit_context_new_rvalue_from_int(ctxt, gccType(curReturnType), 0));
         }
@@ -602,6 +607,16 @@ struct GccBackend::Impl {
         if (v.type.kind == TypeKind::Bool && isIntKind(target.kind)) {
             return materialize(gcc_jit_context_new_cast(ctxt, loc, v.value, gccType(target)), gccType(target));
         }
+        if (target.kind == TypeKind::F64) {
+            if (v.type.kind == TypeKind::F64) return v.value;
+            if (isIntKind(v.type.kind) || v.type.kind == TypeKind::Bool) {
+                return materialize(gcc_jit_context_new_cast(ctxt, loc, v.value, doubleTy), doubleTy);
+            }
+            return v.value;
+        }
+        if (isIntKind(target.kind) && v.type.kind == TypeKind::F64) {
+            return materialize(gcc_jit_context_new_cast(ctxt, loc, v.value, gccType(target)), gccType(target));
+        }
         if (isIntKind(target.kind) && isIntKind(v.type.kind)) {
             if (gccType(v.type) == gccType(target)) return v.value;
             return materialize(gcc_jit_context_new_cast(ctxt, loc, v.value, gccType(target)), gccType(target));
@@ -617,6 +632,9 @@ struct GccBackend::Impl {
     }
 
     gcc_jit_rvalue* toI64(const TypedValue& v) {
+        if (v.type.kind == TypeKind::F64) {
+            return materialize(gcc_jit_context_new_cast(ctxt, loc, v.value, i64Ty), i64Ty);
+        }
         if (!isIntKind(v.type.kind) && v.type.kind != TypeKind::Bool) return v.value;
         if (gccType(v.type) == i64Ty) return v.value;
         return materialize(gcc_jit_context_new_cast(ctxt, loc, v.value, i64Ty), i64Ty);
@@ -632,6 +650,9 @@ struct GccBackend::Impl {
             auto val = genExpr(args[0]);
             if (val.type.kind == TypeKind::String) {
                 callRt(member == "Println" ? "agn_rt_println_str" : "agn_rt_print_str", voidTy, {ptrTy}, {val.value});
+            } else if (val.type.isFloat()) {
+                callRt(member == "Println" ? "agn_rt_println_float" : "agn_rt_print_float", voidTy, {doubleTy},
+                       {coerceValue(val, Type{TypeKind::F64})});
             } else {
                 callRt(member == "Println" ? "agn_rt_println_int" : "agn_rt_print_int", voidTy, {i64Ty}, {toI64(val)});
             }
@@ -856,6 +877,9 @@ struct GccBackend::Impl {
         if (auto* n = std::get_if<ast::NumberExpr>(&expr.node)) {
             return TypedValue{gcc_jit_context_new_rvalue_from_long(ctxt, i64Ty, long(n->value)), Type{TypeKind::I64}};
         }
+        if (auto* n = std::get_if<ast::FloatExpr>(&expr.node)) {
+            return TypedValue{gcc_jit_context_new_rvalue_from_double(ctxt, doubleTy, n->value), Type{TypeKind::F64}};
+        }
         if (auto* n = std::get_if<ast::StringExpr>(&expr.node)) {
             return TypedValue{getStringLiteral(n->value), Type{TypeKind::String}};
         }
@@ -881,16 +905,18 @@ struct GccBackend::Impl {
             }
             auto l = genExpr(*n->left);
             auto r = genExpr(*n->right);
+            bool eitherFloat = l.type.isFloat() || r.type.isFloat();
             bool bothUnsigned = isUnsignedType(l.type) && isUnsignedType(r.type);
-            Type wideType = (isIntKind(l.type.kind) && isIntKind(r.type.kind))
+            Type wideType = eitherFloat ? Type{TypeKind::F64}
+                            : (isIntKind(l.type.kind) && isIntKind(r.type.kind))
                                  ? (typeSize(l.type) >= typeSize(r.type) ? l.type : r.type)
                                  : l.type;
             gcc_jit_type* wide = gccType(wideType);
 
-            gcc_jit_rvalue* lv = isIntKind(l.type.kind) ? coerceValue(l, wideType) : l.value;
-            gcc_jit_rvalue* rv = isIntKind(r.type.kind) ? coerceValue(r, wideType) : r.value;
-            Type resultType = bothUnsigned ? Type{TypeKind::U64} : wideType;
-            if (isIntKind(l.type.kind) && isIntKind(r.type.kind)) resultType = wideType;
+            gcc_jit_rvalue* lv = eitherFloat || isIntKind(l.type.kind) ? coerceValue(l, wideType) : l.value;
+            gcc_jit_rvalue* rv = eitherFloat || isIntKind(r.type.kind) ? coerceValue(r, wideType) : r.value;
+            Type resultType = eitherFloat ? Type{TypeKind::F64} : (bothUnsigned ? Type{TypeKind::U64} : wideType);
+            if (!eitherFloat && isIntKind(l.type.kind) && isIntKind(r.type.kind)) resultType = wideType;
 
             auto binOp = [&](enum gcc_jit_binary_op op) {
                 return TypedValue{materialize(gcc_jit_context_new_binary_op(ctxt, loc, op, wide, lv, rv), wide), resultType};
@@ -1158,7 +1184,10 @@ struct GccBackend::Impl {
                 }
             } else {
                 LocalVar slot = allocSlot(n->name, declared);
-                if (declared.kind != TypeKind::Struct && declared.kind != TypeKind::Array) {
+                if (declared.kind == TypeKind::F64) {
+                    gcc_jit_block_add_assignment(curBlock, loc, accessLocal(slot),
+                                                  gcc_jit_context_new_rvalue_from_double(ctxt, doubleTy, 0.0));
+                } else if (declared.kind != TypeKind::Struct && declared.kind != TypeKind::Array) {
                     gcc_jit_block_add_assignment(curBlock, loc, accessLocal(slot),
                                                   gcc_jit_context_new_rvalue_from_int(ctxt, gccType(declared), 0));
                 }

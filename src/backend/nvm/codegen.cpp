@@ -819,6 +819,10 @@ void NVMCodeGen::generateStatement(ast::Statement& stmt) {
         if (!n->varType.empty()) {
             auto t = checker_.resolveTypeString(n->varType);
             if (t.kind == TypeKind::Struct) structType = t.structName;
+            if (t.kind == TypeKind::F64) {
+                std::fprintf(stderr, "error: floating-point values are not supported by the nvm backend\n");
+                std::exit(1);
+            }
         }
         if (n->value) {
             if (auto* s = std::get_if<ast::StringExpr>(&n->value->node)) compileTimeStrings_[n->name] = s->value;
@@ -1006,6 +1010,10 @@ void NVMCodeGen::generateExpression(ast::Expression& expr) {
     if (auto* n = std::get_if<ast::NumberExpr>(&expr.node)) {
         emitPush(int32_t(n->value));
         return;
+    }
+    if (std::get_if<ast::FloatExpr>(&expr.node)) {
+        std::fprintf(stderr, "error: floating-point values are not supported by the nvm backend\n");
+        std::exit(1);
     }
     if (auto* n = std::get_if<ast::StringExpr>(&expr.node)) {
         materializeString(n->value);

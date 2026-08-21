@@ -25,7 +25,7 @@ Generates native machine code through the LLVM C++ API (`IRBuilder`, `Module`, `
 
 ### nvm
 
-Generates bytecode for the Novaria Virtual Machine and writes it to `<output>.bin`. Running it needs a Novaria kernel or a separate bytecode interpreter; this repository does not ship one. Not supported under this backend: closures and function values, `&` address-of, template string interpolation, the `++` string operator, and `stdio.ReadInt`/`ReadChar`/`ReadLine` (the Novaria kernel's stdin has no working read path). Each of these is a compile-time error naming the specific construct, not a silent miscompile.
+Generates bytecode for the Novaria Virtual Machine and writes it to `<output>.bin`. Running it needs a Novaria kernel or a separate bytecode interpreter; this repository does not ship one. Not supported under this backend: closures and function values, `&` address-of, template string interpolation, the `++` string operator, the `f64` type, and `stdio.ReadInt`/`ReadChar`/`ReadLine` (the Novaria kernel's stdin has no working read path). Each of these is a compile-time error naming the specific construct, not a silent miscompile.
 
 ### gcc
 

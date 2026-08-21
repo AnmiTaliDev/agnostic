@@ -52,6 +52,19 @@ Token Lexer::readNumber() {
         digits.push_back(*currentChar_);
         advance();
     }
+
+    if (currentChar_ == '.' && peek(1) && std::isdigit(static_cast<unsigned char>(*peek(1)))) {
+        digits.push_back('.');
+        advance();
+        while (currentChar_ && std::isdigit(static_cast<unsigned char>(*currentChar_))) {
+            digits.push_back(*currentChar_);
+            advance();
+        }
+        Token t{TokenKind::Float, "", 0};
+        t.numberF = std::strtod(digits.c_str(), nullptr);
+        return t;
+    }
+
     errno = 0;
     char* end = nullptr;
     long long value = std::strtoll(digits.c_str(), &end, 10);
@@ -129,6 +142,7 @@ const char* tokenKindName(TokenKind kind) {
         case TokenKind::Continue: return "continue";
         case TokenKind::Identifier: return "identifier";
         case TokenKind::Number: return "number";
+        case TokenKind::Float: return "float";
         case TokenKind::String: return "string";
         case TokenKind::Plus: return "+";
         case TokenKind::Minus: return "-";

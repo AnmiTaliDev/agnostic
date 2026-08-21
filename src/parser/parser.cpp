@@ -845,6 +845,11 @@ ast::Expression Parser::parsePrimary() {
             advance();
             return ast::Expression{ast::NumberExpr{v}};
         }
+        case TokenKind::Float: {
+            double v = current().numberF;
+            advance();
+            return ast::Expression{ast::FloatExpr{v}};
+        }
         case TokenKind::String: {
             std::string s = current().text;
             advance();

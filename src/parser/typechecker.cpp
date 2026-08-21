@@ -12,6 +12,7 @@ bool Type::isNumeric() const {
     switch (kind) {
         case TypeKind::I64: case TypeKind::I32: case TypeKind::I8:
         case TypeKind::U64: case TypeKind::U32: case TypeKind::U8:
+        case TypeKind::F64:
             return true;
         default:
             return false;
@@ -55,6 +56,7 @@ std::string Type::toString() const {
         case TypeKind::U64: return "u64";
         case TypeKind::U32: return "u32";
         case TypeKind::U8: return "u8";
+        case TypeKind::F64: return "f64";
         case TypeKind::Bool: return "bool";
         case TypeKind::String: return "string";
         case TypeKind::Void: return "void";
@@ -84,6 +86,7 @@ Type TypeChecker::namedType(const std::string& name) {
     if (name == "u64") return Type{TypeKind::U64};
     if (name == "u32") return Type{TypeKind::U32};
     if (name == "u8") return Type{TypeKind::U8};
+    if (name == "f64" || name == "float") return Type{TypeKind::F64};
     if (name == "bool") return Type{TypeKind::Bool};
     if (name == "string") return Type{TypeKind::String};
     if (name.empty() || name == "void") return Type{TypeKind::Void};
@@ -446,6 +449,7 @@ Type TypeChecker::checkFunctionLiteral(ast::FunctionLiteralExpr& lit) {
 
 Type TypeChecker::checkExpression(ast::Expression& expr) {
     if (std::get_if<ast::NumberExpr>(&expr.node)) return Type{TypeKind::I64};
+    if (std::get_if<ast::FloatExpr>(&expr.node)) return Type{TypeKind::F64};
     if (std::get_if<ast::StringExpr>(&expr.node)) return Type{TypeKind::String};
 
     if (auto* n = std::get_if<ast::TemplateStringExpr>(&expr.node)) {
@@ -475,12 +479,20 @@ Type TypeChecker::checkExpression(ast::Expression& expr) {
         Type l = checkExpression(*n->left);
         Type r = checkExpression(*n->right);
         switch (n->op) {
-            case ast::BinaryOp::Add: case ast::BinaryOp::Sub: case ast::BinaryOp::Mul:
-            case ast::BinaryOp::Div: case ast::BinaryOp::Mod:
-            case ast::BinaryOp::BitAnd: case ast::BinaryOp::BitOr: case ast::BinaryOp::BitXor:
-            case ast::BinaryOp::Shl: case ast::BinaryOp::Shr:
+            case ast::BinaryOp::Add: case ast::BinaryOp::Sub: case ast::BinaryOp::Mul: case ast::BinaryOp::Div:
                 if (!l.isNumeric()) addError("left operand must be numeric, got " + l.toString());
                 if (!r.isNumeric()) addError("right operand must be numeric, got " + r.toString());
+                return (l.isFloat() || r.isFloat()) ? Type{TypeKind::F64} : l;
+            case ast::BinaryOp::Mod:
+            case ast::BinaryOp::BitAnd: case ast::BinaryOp::BitOr: case ast::BinaryOp::BitXor:
+            case ast::BinaryOp::Shl: case ast::BinaryOp::Shr:
+                if (l.isFloat() || r.isFloat()) {
+                    addError("'" + l.toString() + "' and '" + r.toString() +
+                             "': this operator does not support float operands");
+                } else {
+                    if (!l.isNumeric()) addError("left operand must be numeric, got " + l.toString());
+                    if (!r.isNumeric()) addError("right operand must be numeric, got " + r.toString());
+                }
                 return l;
             case ast::BinaryOp::Concat:
                 return Type{TypeKind::String};

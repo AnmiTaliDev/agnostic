@@ -93,7 +93,7 @@ There is no operator overloading.
 
 ## Literals
 
-Integer literals are decimal only: `0`, `42`, `1000000`. There is no hexadecimal, octal, or binary literal syntax, and no floating-point type.
+Integer literals are decimal only: `0`, `42`, `1000000`. There is no hexadecimal, octal, or binary literal syntax. A literal with a decimal point (`3.14`) is an `f64` literal; see [Types](/en/types/).
 
 String literals are double-quoted with `\n`, `\t`, `\r`, `\\`, and `\"` escapes:
 

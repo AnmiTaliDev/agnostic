@@ -12,7 +12,7 @@
 
 namespace agn::parser {
 
-enum class TypeKind { I64, I32, I8, U64, U32, U8, Bool, String, Ptr, Array, Function, Struct, Void, Unknown };
+enum class TypeKind { I64, I32, I8, U64, U32, U8, F64, Bool, String, Ptr, Array, Function, Struct, Void, Unknown };
 
 struct Type {
     Type() = default;
@@ -27,6 +27,7 @@ struct Type {
     std::string structName;
 
     bool isNumeric() const;
+    bool isFloat() const { return kind == TypeKind::F64; }
     bool canAssignTo(const Type& other) const;
     std::string toString() const;
     bool operator==(const Type& other) const;
