@@ -44,6 +44,7 @@ bool Type::canAssignTo(const Type& other) const {
     if (*this == other) return true;
     if (isNumeric() && other.isNumeric()) return true;
     if (kind == TypeKind::Ptr && other.isNumeric()) return true;
+    if (kind == TypeKind::Ptr && other.kind == TypeKind::String) return true;
     if (kind == TypeKind::Bool && other.isNumeric()) return true;
     if (other.kind == TypeKind::Bool && isNumeric()) return true;
     if (kind == TypeKind::Unknown || other.kind == TypeKind::Unknown) return true;
