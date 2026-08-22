@@ -102,6 +102,7 @@ void printUsage(const char* argv0) {
               << "  --mem=arc|manual|orc     select memory management mode (default: arc; orc allocations don't survive their function)\n"
               << "  --target-os=linux|freebsd|windows|hurd  (default: linux, only linux/freebsd implemented)\n"
               << "  --output=<path>          output executable path\n"
+              << "  -c, --compile-only       emit an object file (<output>.o) instead of linking an executable\n"
               << "  --version                print version and exit\n"
               << "  --help                   print this message and exit\n"
               << "\n"
@@ -121,6 +122,7 @@ int main(int argc, char** argv) {
     std::string memMode = "arc";
     std::string targetOs = "linux";
     std::string output;
+    bool compileOnly = false;
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -139,6 +141,7 @@ int main(int argc, char** argv) {
         else if (arg == "--llvm") backend = "llvm";
         else if (arg == "--nvm") backend = "nvm";
         else if (arg == "--gcc") backend = "gcc";
+        else if (arg == "-c" || arg == "--compile-only") compileOnly = true;
         else if (sourceFile.empty()) sourceFile = arg;
         else {
             std::cerr << "error: unrecognized argument: " << arg << "\n";
@@ -238,6 +241,11 @@ int main(int argc, char** argv) {
             std::cerr << "error: " << codegenError << "\n";
             return 1;
         }
+    }
+
+    if (compileOnly) {
+        std::cout << "Compilation successful: " << objPath << "\n";
+        return 0;
     }
 
     std::string osSuffix = targetOs == "freebsd" ? "_freebsd" : "";
