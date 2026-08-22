@@ -256,6 +256,27 @@ struct Codegen::Impl {
         }
     }
 
+    void emitExportWrappers(ast::Program& program) {
+        for (auto& f : program.functions) {
+            if (f.receiver || f.name == "main" || !f.isExported) continue;
+            std::string key = funcKey(f);
+            auto& sig = checker.functions().at(key);
+            llvm::Function* inner = functionTable.at(key);
+
+            auto* wrapperTy = fnTypeFor(sig, false);
+            auto* wrapper = llvm::Function::Create(wrapperTy, llvm::Function::ExternalLinkage, f.name, mod.get());
+
+            auto* bb = llvm::BasicBlock::Create(ctx, "entry", wrapper);
+            llvm::IRBuilder<> b(bb);
+            std::vector<llvm::Value*> callArgs;
+            callArgs.push_back(llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(ptrTy)));
+            for (auto& arg : wrapper->args()) callArgs.push_back(&arg);
+            auto* call = b.CreateCall(inner, callArgs);
+            if (sig.returnType.kind == TypeKind::Void) b.CreateRetVoid();
+            else b.CreateRet(call);
+        }
+    }
+
     bool currentBlockTerminated() { return builder.GetInsertBlock()->getTerminator() != nullptr; }
 
     llvm::FunctionCallee getRtFn(const std::string& name, llvm::FunctionType* ty) {
@@ -1293,6 +1314,7 @@ void Codegen::generate(agn::ast::Program& program) {
     impl_->declareStructs();
     impl_->declareFunctions(program);
     impl_->defineAllFunctionBodies(program);
+    impl_->emitExportWrappers(program);
 }
 
 void Codegen::dumpIR() const { impl_->mod->print(llvm::errs(), nullptr); }
