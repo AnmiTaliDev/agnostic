@@ -20,11 +20,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build llvm-dev clang libgccjit-13-dev
 
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-
       - name: Build
-        run: cmake --build build
+        run: ./scripts/build.sh . build -G Ninja
 
       - name: Run tests
         run: ./scripts/test.sh build
@@ -44,8 +41,7 @@ jobs:
       - name: Build and package
         run: |
           version="${GITHUB_REF_NAME#v}"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAGNOSTIC_VERSION="$version"
-          cmake --build build
+          ./scripts/build.sh . build -G Ninja -DAGNOSTIC_VERSION="$version"
           (cd build && cpack -G DEB)
 
       - uses: actions/upload-artifact@v4
@@ -67,8 +63,7 @@ jobs:
       - name: Build and package
         run: |
           version="${GITHUB_REF_NAME#v}"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAGNOSTIC_VERSION="$version"
-          cmake --build build
+          ./scripts/build.sh . build -G Ninja -DAGNOSTIC_VERSION="$version"
           (cd build && cpack -G RPM)
 
       - uses: actions/upload-artifact@v4

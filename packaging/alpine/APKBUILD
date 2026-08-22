@@ -12,10 +12,8 @@ options="!check !strip"
 builddir="$srcdir/build"
 
 build() {
-    cmake -S "$startdir/../.." -B "$builddir" \
-        -DCMAKE_BUILD_TYPE=Release \
+    "$startdir/../../scripts/build.sh" "$startdir/../.." "$builddir" \
         -DAGNOSTIC_VERSION="$pkgver"
-    cmake --build "$builddir" -- -j"$(nproc)"
 }
 
 package() {

@@ -12,10 +12,8 @@ options=('staticlibs' '!strip')
 source=()
 
 build() {
-    cmake -S "$startdir/../.." -B "$srcdir/build" \
-        -DCMAKE_BUILD_TYPE=Release \
+    "$startdir/../../scripts/build.sh" "$startdir/../.." "$srcdir/build" \
         -DAGNOSTIC_VERSION="$pkgver"
-    cmake --build "$srcdir/build" -j"$(nproc)"
 }
 
 package() {
