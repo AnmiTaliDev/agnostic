@@ -1314,12 +1314,17 @@ bool Codegen::emitObjectFile(const std::string& path, std::string& errorOut) {
     }
 
     llvm::TargetOptions opts;
+#if LLVM_VERSION_MAJOR >= 18
+    auto optLevel = llvm::CodeGenOptLevel::Default;
+#else
+    auto optLevel = llvm::CodeGenOpt::Level::Default;
+#endif
 #if LLVM_VERSION_MAJOR >= 19
     auto* machine = target->createTargetMachine(triple, "generic", "", opts,
-                                                 llvm::Reloc::PIC_, std::nullopt, llvm::CodeGenOptLevel::Default);
+                                                 llvm::Reloc::PIC_, std::nullopt, optLevel);
 #else
     auto* machine = target->createTargetMachine(triple.str(), "generic", "", opts,
-                                                 llvm::Reloc::PIC_, std::nullopt, llvm::CodeGenOptLevel::Default);
+                                                 llvm::Reloc::PIC_, std::nullopt, optLevel);
 #endif
     if (!machine) {
         errorOut = "failed to create target machine";
@@ -1342,7 +1347,12 @@ bool Codegen::emitObjectFile(const std::string& path, std::string& errorOut) {
     }
 
     llvm::legacy::PassManager pass;
-    if (machine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
+#if LLVM_VERSION_MAJOR >= 18
+    auto objectFileType = llvm::CodeGenFileType::ObjectFile;
+#else
+    auto objectFileType = llvm::CGFT_ObjectFile;
+#endif
+    if (machine->addPassesToEmitFile(pass, dest, nullptr, objectFileType)) {
         errorOut = "target machine can't emit object files";
         delete machine;
         return false;
