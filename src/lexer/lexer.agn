@@ -1,0 +1,375 @@
+package main
+
+import "os"
+import "string"
+
+struct TokenInfo {
+    kind int
+    end int
+    number int
+    floatValue float
+    text string
+}
+
+func byteAt(source string, pos int) int {
+    var c Option<int> = string.charAt(source, pos)
+    return c.value
+}
+
+func isDigit(c int) bool {
+    return c >= 48 && c <= 57
+}
+
+func isAlpha(c int) bool {
+    return (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95
+}
+
+func isAlnum(c int) bool {
+    return isDigit(c) || isAlpha(c)
+}
+
+pub fn LexLoadSource(path string) string {
+    var buf [131072]i8
+    var fd Option<int> = os.OpenRead(path)
+    if !fd.some {
+        return ""
+    }
+    var n Option<int> = os.ReadFd(fd.value, &buf, 131071)
+    os.Close(fd.value)
+    if !n.some {
+        return ""
+    }
+    buf[n.value] = 0
+    var stackSource string = &buf
+    // force a heap copy: `stackSource` points at a local array that dies when we return
+    return string.concat(stackSource, "")
+}
+
+pub fn LexSkip(source string, pos0 int) int {
+    var n int = string.len(source)
+    var pos int = pos0
+    for pos < n {
+        var c int = byteAt(source, pos)
+        if c != 32 && c != 9 && c != 13 {
+            break
+        }
+        pos = pos + 1
+    }
+    if pos + 1 < n {
+        var c0 int = byteAt(source, pos)
+        var c1 int = byteAt(source, pos + 1)
+        if c0 == 47 && c1 == 47 {
+            for pos < n && byteAt(source, pos) != 10 {
+                pos = pos + 1
+            }
+            return pos
+        }
+    }
+    if pos < n && byteAt(source, pos) == 35 {
+        for pos < n && byteAt(source, pos) != 10 {
+            pos = pos + 1
+        }
+    }
+    return pos
+}
+
+func matchKeyword(text string) int {
+    if string.compare(text, "package") == 0 {
+        return 0
+    }
+    if string.compare(text, "import") == 0 || string.compare(text, "use") == 0 {
+        return 1
+    }
+    if string.compare(text, "func") == 0 || string.compare(text, "fn") == 0 {
+        return 2
+    }
+    if string.compare(text, "var") == 0 || string.compare(text, "let") == 0 {
+        return 3
+    }
+    if string.compare(text, "if") == 0 {
+        return 4
+    }
+    if string.compare(text, "else") == 0 {
+        return 5
+    }
+    if string.compare(text, "for") == 0 || string.compare(text, "while") == 0 || string.compare(text, "loop") == 0 {
+        return 6
+    }
+    if string.compare(text, "return") == 0 {
+        return 7
+    }
+    if string.compare(text, "asm") == 0 {
+        return 8
+    }
+    if string.compare(text, "struct") == 0 {
+        return 9
+    }
+    if string.compare(text, "comptime") == 0 {
+        return 10
+    }
+    if string.compare(text, "break") == 0 {
+        return 11
+    }
+    if string.compare(text, "continue") == 0 {
+        return 12
+    }
+    return -1
+}
+
+func readWord(source string, pos int) TokenInfo {
+    var n int = string.len(source)
+    var end int = pos
+    for end < n && isAlnum(byteAt(source, end)) {
+        end = end + 1
+    }
+    var text string = string.substr(source, pos, end - pos)
+
+    if string.compare(text, "true") == 0 {
+        return TokenInfo{kind: 17, end: end, number: 1, floatValue: 0.0, text: ""}
+    }
+    if string.compare(text, "false") == 0 {
+        return TokenInfo{kind: 17, end: end, number: 0, floatValue: 0.0, text: ""}
+    }
+
+    var kw int = matchKeyword(text)
+    if kw >= 0 {
+        return TokenInfo{kind: kw, end: end, number: 0, floatValue: 0.0, text: ""}
+    }
+    return TokenInfo{kind: 13, end: end, number: 0, floatValue: 0.0, text: text}
+}
+
+func readNumberOrFloat(source string, pos int) TokenInfo {
+    var n int = string.len(source)
+    var end int = pos
+    for end < n && isDigit(byteAt(source, end)) {
+        end = end + 1
+    }
+    if end + 1 < n && byteAt(source, end) == 46 && isDigit(byteAt(source, end + 1)) {
+        var fend int = end + 1
+        for fend < n && isDigit(byteAt(source, fend)) {
+            fend = fend + 1
+        }
+        var ftext string = string.substr(source, pos, fend - pos)
+        return TokenInfo{kind: 15, end: fend, number: 0, floatValue: FloatFromText(ftext), text: ""}
+    }
+    var itext string = string.substr(source, pos, end - pos)
+    return TokenInfo{kind: 14, end: end, number: IntFromText(itext), floatValue: 0.0, text: ""}
+}
+
+pub fn IntFromText(text string) int {
+    var n int = string.len(text)
+    var value int = 0
+    var i int = 0
+    for i < n {
+        var c int = byteAt(text, i)
+        value = value * 10 + (c - 48)
+        i = i + 1
+    }
+    return value
+}
+
+pub fn FloatFromText(text string) float {
+    var n int = string.len(text)
+    var value float = 0.0
+    var i int = 0
+    for i < n && byteAt(text, i) != 46 {
+        var c int = byteAt(text, i)
+        value = value * 10.0 + (c - 48)
+        i = i + 1
+    }
+    if i < n {
+        i = i + 1
+        var scale float = 0.1
+        for i < n {
+            var c2 int = byteAt(text, i)
+            value = value + (c2 - 48) * scale
+            scale = scale / 10.0
+            i = i + 1
+        }
+    }
+    return value
+}
+
+func readStringLiteral(source string, pos int) TokenInfo {
+    var n int = string.len(source)
+    var i int = pos
+    var out [65536]i8
+    var outLen int = 0
+    for i < n && byteAt(source, i) != 34 {
+        var c int = byteAt(source, i)
+        if c == 92 && i + 1 < n {
+            i = i + 1
+            var e int = byteAt(source, i)
+            var setch int = e
+            if e == 110 {
+                setch = 10
+            }
+            if e == 116 {
+                setch = 9
+            }
+            if e == 114 {
+                setch = 13
+            }
+            out[outLen] = setch
+            outLen = outLen + 1
+            i = i + 1
+        } else {
+            out[outLen] = c
+            outLen = outLen + 1
+            i = i + 1
+        }
+    }
+    if i < n {
+        i = i + 1
+    }
+    out[outLen] = 0
+    var stackText string = &out
+    var text string = string.concat(stackText, "")
+    return TokenInfo{kind: 16, end: i, number: 0, floatValue: 0.0, text: text}
+}
+
+func classify(source string, pos int) TokenInfo {
+    var n int = string.len(source)
+    if pos >= n {
+        return TokenInfo{kind: 52, end: pos, number: 0, floatValue: 0.0, text: ""}
+    }
+    var c int = byteAt(source, pos)
+
+    if c == 10 {
+        return TokenInfo{kind: 51, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 43 {
+        if pos + 1 < n && byteAt(source, pos + 1) == 43 {
+            return TokenInfo{kind: 49, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        return TokenInfo{kind: 18, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 45 {
+        if pos + 1 < n && byteAt(source, pos + 1) == 62 {
+            return TokenInfo{kind: 47, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        return TokenInfo{kind: 19, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 42 {
+        return TokenInfo{kind: 20, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 47 {
+        return TokenInfo{kind: 21, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 37 {
+        return TokenInfo{kind: 22, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 61 {
+        if pos + 1 < n && byteAt(source, pos + 1) == 61 {
+            return TokenInfo{kind: 24, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        return TokenInfo{kind: 23, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 33 {
+        if pos + 1 < n && byteAt(source, pos + 1) == 61 {
+            return TokenInfo{kind: 25, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        return TokenInfo{kind: 32, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 60 {
+        if pos + 1 < n && byteAt(source, pos + 1) == 60 {
+            return TokenInfo{kind: 35, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        if pos + 1 < n && byteAt(source, pos + 1) == 61 {
+            return TokenInfo{kind: 27, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        return TokenInfo{kind: 26, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 62 {
+        if pos + 1 < n && byteAt(source, pos + 1) == 62 {
+            return TokenInfo{kind: 36, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        if pos + 1 < n && byteAt(source, pos + 1) == 61 {
+            return TokenInfo{kind: 29, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        return TokenInfo{kind: 28, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 38 {
+        if pos + 1 < n && byteAt(source, pos + 1) == 38 {
+            return TokenInfo{kind: 30, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        return TokenInfo{kind: 48, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 124 {
+        if pos + 1 < n && byteAt(source, pos + 1) == 124 {
+            return TokenInfo{kind: 31, end: pos + 2, number: 0, floatValue: 0.0, text: ""}
+        }
+        return TokenInfo{kind: 33, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 94 {
+        return TokenInfo{kind: 34, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 40 {
+        return TokenInfo{kind: 37, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 41 {
+        return TokenInfo{kind: 38, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 123 {
+        return TokenInfo{kind: 39, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 125 {
+        return TokenInfo{kind: 40, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 91 {
+        return TokenInfo{kind: 41, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 93 {
+        return TokenInfo{kind: 42, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 44 {
+        return TokenInfo{kind: 43, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 59 {
+        return TokenInfo{kind: 44, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 58 {
+        return TokenInfo{kind: 45, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 46 {
+        return TokenInfo{kind: 46, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 36 {
+        return TokenInfo{kind: 50, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+    }
+    if c == 34 {
+        return readStringLiteral(source, pos + 1)
+    }
+    if isDigit(c) {
+        return readNumberOrFloat(source, pos)
+    }
+    if isAlpha(c) {
+        return readWord(source, pos)
+    }
+    return TokenInfo{kind: -1, end: pos + 1, number: 0, floatValue: 0.0, text: ""}
+}
+
+pub fn LexKind(source string, pos int) int {
+    var t TokenInfo = classify(source, pos)
+    return t.kind
+}
+
+pub fn LexEnd(source string, pos int) int {
+    var t TokenInfo = classify(source, pos)
+    return t.end
+}
+
+pub fn LexNumberValue(source string, pos int) int {
+    var t TokenInfo = classify(source, pos)
+    return t.number
+}
+
+pub fn LexFloatValue(source string, pos int) float {
+    var t TokenInfo = classify(source, pos)
+    return t.floatValue
+}
+
+pub fn LexText(source string, pos int) string {
+    var t TokenInfo = classify(source, pos)
+    return t.text
+}

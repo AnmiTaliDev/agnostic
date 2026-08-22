@@ -30,4 +30,5 @@ run.sh
 
 # Compiled files
 build/**
+build-bootstrap/**
 *.bin
