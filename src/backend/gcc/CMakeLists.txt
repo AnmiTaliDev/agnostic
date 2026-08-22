@@ -3,6 +3,17 @@
 find_path(GCCJIT_INCLUDE_DIR NAMES libgccjit.h)
 find_library(GCCJIT_LIBRARY NAMES gccjit)
 
+if(NOT GCCJIT_LIBRARY)
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} -print-file-name=libgccjit.so
+    OUTPUT_VARIABLE GCCJIT_PRINT_FILE_NAME
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if(GCCJIT_PRINT_FILE_NAME AND NOT GCCJIT_PRINT_FILE_NAME STREQUAL "libgccjit.so" AND EXISTS "${GCCJIT_PRINT_FILE_NAME}")
+    set(GCCJIT_LIBRARY "${GCCJIT_PRINT_FILE_NAME}")
+  endif()
+endif()
+
 if(NOT GCCJIT_INCLUDE_DIR OR NOT GCCJIT_LIBRARY)
   message(FATAL_ERROR "libgccjit not found (need libgccjit.h and libgccjit.so)")
 endif()
