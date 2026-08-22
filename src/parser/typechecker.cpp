@@ -44,6 +44,8 @@ bool Type::canAssignTo(const Type& other) const {
     if (*this == other) return true;
     if (isNumeric() && other.isNumeric()) return true;
     if (kind == TypeKind::Ptr && other.isNumeric()) return true;
+    if (kind == TypeKind::Bool && other.isNumeric()) return true;
+    if (other.kind == TypeKind::Bool && isNumeric()) return true;
     if (kind == TypeKind::Unknown || other.kind == TypeKind::Unknown) return true;
     return false;
 }
@@ -450,6 +452,7 @@ Type TypeChecker::checkFunctionLiteral(ast::FunctionLiteralExpr& lit) {
 Type TypeChecker::checkExpression(ast::Expression& expr) {
     if (std::get_if<ast::NumberExpr>(&expr.node)) return Type{TypeKind::I64};
     if (std::get_if<ast::FloatExpr>(&expr.node)) return Type{TypeKind::F64};
+    if (std::get_if<ast::BoolExpr>(&expr.node)) return Type{TypeKind::Bool};
     if (std::get_if<ast::StringExpr>(&expr.node)) return Type{TypeKind::String};
 
     if (auto* n = std::get_if<ast::TemplateStringExpr>(&expr.node)) {

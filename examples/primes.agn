@@ -7,7 +7,7 @@ func main() {
     var found int = 0
     var n int = 2
     for found < 10 {
-        if math.IsPrime(n) == 0 {
+        if !math.IsPrime(n) {
             n = n + 1
             continue
         }

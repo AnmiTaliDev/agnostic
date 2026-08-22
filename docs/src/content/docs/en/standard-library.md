@@ -7,7 +7,7 @@ Every function in these modules is a compiler intrinsic: the body written in the
 
 ## result
 
-`stdlib/result.agn` declares `Result<T,E>` (`ok int`, `value T`, `err E`) and `Option<T>` (`some int`, `value T`). Unlike every other module here, these two generic structs are always in scope — no `import "result"` needed — and their fields are real data, not a compiler-generated body; the compiler parses this file directly and merges its declarations into every compiled program. See [Generic structs](/en/structs/#generic-structs) for how instantiation (`Result<int,string>`) and monomorphization work.
+`stdlib/result.agn` declares `Result<T,E>` (`ok bool`, `value T`, `err E`) and `Option<T>` (`some bool`, `value T`). Unlike every other module here, these two generic structs are always in scope — no `import "result"` needed — and their fields are real data, not a compiler-generated body; the compiler parses this file directly and merges its declarations into every compiled program. See [Generic structs](/en/structs/#generic-structs) for how instantiation (`Result<int,string>`) and monomorphization work.
 
 ## stdio
 
@@ -29,7 +29,7 @@ Every function in these modules is a compiler intrinsic: the body written in the
 
 ## math
 
-All functions take and return `int`.
+All functions take `int`; most return `int`, except `IsEven`/`IsOdd`/`IsPrime`, which return `bool`.
 
 | Function | Signature | Notes |
 |---|---|---|
@@ -40,12 +40,12 @@ All functions take and return `int`.
 | `GCD` | `(a int, b int) int` | Euclidean algorithm, positive input only |
 | `LCM` | `(a int, b int) int` | positive input only |
 | `Fact` | `(n int) int` | factorial |
-| `IsEven` | `(n int) int` | 1 or 0 |
-| `IsOdd` | `(n int) int` | 1 or 0 |
+| `IsEven` | `(n int) bool` | |
+| `IsOdd` | `(n int) bool` | |
 | `Sign` | `(x int) int` | 1 if `x > 0`, otherwise 0; negative input is not distinguished from zero |
 | `Clamp` | `(value int, min int, max int) int` | |
 | `SumRange` | `(n int) int` | sum of `1..n` |
-| `IsPrime` | `(n int) int` | trial division, 1 or 0 |
+| `IsPrime` | `(n int) bool` | trial division |
 | `Fib` | `(n int) int` | n-th Fibonacci number, iterative |
 
 ## string
@@ -55,12 +55,12 @@ All functions take and return `int`.
 | `len` | `(s string) int` | byte length |
 | `compare` | `(s1 string, s2 string) int` | 0 if equal, -1 if `s1 < s2`, 1 if `s1 > s2` |
 | `concat` | `(s1 string, s2 string) string` | |
-| `is_empty` | `(s string) int` | 1 or 0 |
-| `indexOf` | `(s string, sub string) Option<int>` | index of the first occurrence of `sub`; `some=0` if not found |
-| `contains` | `(s string, sub string) int` | 1 or 0 |
-| `startsWith` | `(s string, prefix string) int` | 1 or 0 |
-| `endsWith` | `(s string, suffix string) int` | 1 or 0 |
-| `charAt` | `(s string, index int) Option<int>` | byte code at `index`; `some=0` if out of bounds |
+| `is_empty` | `(s string) bool` | |
+| `indexOf` | `(s string, sub string) Option<int>` | index of the first occurrence of `sub`; `some=false` if not found |
+| `contains` | `(s string, sub string) bool` | |
+| `startsWith` | `(s string, prefix string) bool` | |
+| `endsWith` | `(s string, suffix string) bool` | |
+| `charAt` | `(s string, index int) Option<int>` | byte code at `index`; `some=false` if out of bounds |
 | `substr` | `(s string, start int, len int) string` | clamped to the string's bounds |
 | `toUpper` | `(s string) string` | ASCII only |
 | `toLower` | `(s string) string` | ASCII only |
@@ -75,16 +75,16 @@ File descriptors and command-line arguments. Compile errors under `--backend=nvm
 |---|---|---|
 | `ArgCount` | `() int` | number of command-line arguments, including argv[0] (the program path) |
 | `Arg` | `(index int) string` | argument at `index` |
-| `OpenRead` | `(path string) Option<int>` | value is the file descriptor; `some=0` on error |
-| `OpenCreate` | `(path string) Option<int>` | create/truncate for writing; value is the file descriptor, `some=0` on error |
+| `OpenRead` | `(path string) Option<int>` | value is the file descriptor; `some=false` on error |
+| `OpenCreate` | `(path string) Option<int>` | create/truncate for writing; value is the file descriptor, `some=false` on error |
 | `Close` | `(fd int) int` | |
-| `ReadFd` | `(fd int, buffer int, maxlen int) Option<int>` | reads into a heap buffer address, like `stdio.ReadLine`; value is bytes read, `some=0` on error |
-| `WriteFd` | `(fd int, data string) Option<int>` | value is bytes written, `some=0` on error |
+| `ReadFd` | `(fd int, buffer int, maxlen int) Option<int>` | reads into a heap buffer address, like `stdio.ReadLine`; value is bytes read, `some=false` on error |
+| `WriteFd` | `(fd int, data string) Option<int>` | value is bytes written, `some=false` on error |
 | `Exit` | `(code int)` | terminates the process immediately, bypassing any remaining code in the caller |
 
 `ReadFd`'s (and `stdio.ReadLine`'s) `buffer` parameter is typed `int` but accepts the pointer produced by `&arr` directly — a pointer value assigned to an `int` parameter decays to its address.
 
-`OpenRead`, `OpenCreate`, `ReadFd`, and `WriteFd` return `Option<int>` (see [Generic structs](/en/structs/#generic-structs)) instead of a raw sentinel: `some` is 1 on success and 0 on failure, and `value` holds the file descriptor or byte count only when `some` is 1 — check `some` before trusting `value`.
+`OpenRead`, `OpenCreate`, `ReadFd`, and `WriteFd` return `Option<int>` (see [Generic structs](/en/structs/#generic-structs)) instead of a raw sentinel: `some` is `true` on success and `false` on failure, and `value` holds the file descriptor or byte count only when `some` is `true` — check `some` before trusting `value`.
 
 ## novaria
 

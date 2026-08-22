@@ -13,31 +13,31 @@ pub fn concat(s1 string, s2 string) string {
     return ""
 }
 
-pub fn is_empty(s string) int {
+pub fn is_empty(s string) bool {
     if len(s) == 0 {
-        return 1
+        return true
     }
-    return 0
+    return false
 }
 
 pub fn indexOf(s string, sub string) Option<int> {
-    return Option<int>{some: 0, value: 0}
+    return Option<int>{some: false, value: 0}
 }
 
-pub fn contains(s string, sub string) int {
-    return 0
+pub fn contains(s string, sub string) bool {
+    return false
 }
 
-pub fn startsWith(s string, prefix string) int {
-    return 0
+pub fn startsWith(s string, prefix string) bool {
+    return false
 }
 
-pub fn endsWith(s string, suffix string) int {
-    return 0
+pub fn endsWith(s string, suffix string) bool {
+    return false
 }
 
 pub fn charAt(s string, index int) Option<int> {
-    return Option<int>{some: 0, value: 0}
+    return Option<int>{some: false, value: 0}
 }
 
 // clamped to the string's bounds

@@ -626,8 +626,7 @@ struct Codegen::Impl {
     TypedValue wrapOptionInt(llvm::Value* rawValue, const std::string& qualifiedFnName) {
         Type retType = checker.functions().at(qualifiedFnName).returnType;
         auto* structTy = structTypes.at(retType.structName);
-        auto* someFlag = builder.CreateZExt(
-            builder.CreateICmpSGE(rawValue, llvm::ConstantInt::get(i64Ty, 0)), i64Ty);
+        auto* someFlag = builder.CreateICmpSGE(rawValue, llvm::ConstantInt::get(i64Ty, 0));
         llvm::Value* agg = llvm::UndefValue::get(structTy);
         agg = builder.CreateInsertValue(agg, someFlag, 0);
         agg = builder.CreateInsertValue(agg, rawValue, 1);
@@ -672,17 +671,17 @@ struct Codegen::Impl {
         if (member == "contains") {
             auto* call = rt("agn_rt_contains", i64Ty, {ptrTy, ptrTy},
                              {genExpr(args[0]).value, genExpr(args[1]).value});
-            return TypedValue{call, Type{TypeKind::I64}};
+            return TypedValue{coerceValue({call, Type{TypeKind::I64}}, Type{TypeKind::Bool}), Type{TypeKind::Bool}};
         }
         if (member == "startsWith") {
             auto* call = rt("agn_rt_starts_with", i64Ty, {ptrTy, ptrTy},
                              {genExpr(args[0]).value, genExpr(args[1]).value});
-            return TypedValue{call, Type{TypeKind::I64}};
+            return TypedValue{coerceValue({call, Type{TypeKind::I64}}, Type{TypeKind::Bool}), Type{TypeKind::Bool}};
         }
         if (member == "endsWith") {
             auto* call = rt("agn_rt_ends_with", i64Ty, {ptrTy, ptrTy},
                              {genExpr(args[0]).value, genExpr(args[1]).value});
-            return TypedValue{call, Type{TypeKind::I64}};
+            return TypedValue{coerceValue({call, Type{TypeKind::I64}}, Type{TypeKind::Bool}), Type{TypeKind::Bool}};
         }
         if (member == "charAt") {
             auto* call = rt("agn_rt_char_at", i64Ty, {ptrTy, i64Ty},
@@ -836,6 +835,9 @@ struct Codegen::Impl {
         }
         if (auto* n = std::get_if<ast::FloatExpr>(&expr.node)) {
             return TypedValue{llvm::ConstantFP::get(doubleTy, n->value), Type{TypeKind::F64}};
+        }
+        if (auto* n = std::get_if<ast::BoolExpr>(&expr.node)) {
+            return TypedValue{llvm::ConstantInt::get(i1Ty, n->value ? 1 : 0), Type{TypeKind::Bool}};
         }
         if (auto* n = std::get_if<ast::StringExpr>(&expr.node)) {
             return TypedValue{getStringLiteral(n->value), Type{TypeKind::String}};

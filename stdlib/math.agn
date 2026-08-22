@@ -97,18 +97,18 @@ pub fn Fact(n int) int {
     return result
 }
 
-pub fn IsEven(n int) int {
+pub fn IsEven(n int) bool {
     if n % 2 == 0 {
-        return 1
+        return true
     }
-    return 0
+    return false
 }
 
-pub fn IsOdd(n int) int {
+pub fn IsOdd(n int) bool {
     if n % 2 != 0 {
-        return 1
+        return true
     }
-    return 0
+    return false
 }
 
 // 1 if x > 0, otherwise 0 -- negative input is not distinguished from zero
@@ -133,18 +133,18 @@ pub fn SumRange(n int) int {
     return (n * (n + 1)) / 2
 }
 
-pub fn IsPrime(n int) int {
+pub fn IsPrime(n int) bool {
     if n <= 1 {
-        return 0
+        return false
     }
     if n <= 3 {
-        return 1
+        return true
     }
     if n % 2 == 0 {
-        return 0
+        return false
     }
     if n % 3 == 0 {
-        return 0
+        return false
     }
 
     var limit int = Sqrt(n)
@@ -152,15 +152,15 @@ pub fn IsPrime(n int) int {
 
     for i <= limit {
         if n % i == 0 {
-            return 0
+            return false
         }
         if n % (i + 2) == 0 {
-            return 0
+            return false
         }
         i = i + 6
     }
 
-    return 1
+    return true
 }
 
 pub fn Fib(n int) int {

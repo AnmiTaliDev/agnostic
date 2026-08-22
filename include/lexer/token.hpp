@@ -11,7 +11,7 @@ enum class TokenKind {
     Package, Import, Func, Var, If, Else, For, Return, Asm, Struct, Comptime,
     Break, Continue,
 
-    Identifier, Number, Float, String,
+    Identifier, Number, Float, String, BoolLiteral,
 
     Plus, Minus, Star, Slash, Percent, Assign, Equal, NotEqual,
     Less, LessEqual, Greater, GreaterEqual, And, Or, Not, Pipe, Caret,
@@ -41,6 +41,8 @@ struct Token {
                 return number == other.number;
             case TokenKind::Float:
                 return numberF == other.numberF;
+            case TokenKind::BoolLiteral:
+                return number == other.number;
             default:
                 return true;
         }

@@ -1015,6 +1015,10 @@ void NVMCodeGen::generateExpression(ast::Expression& expr) {
         std::fprintf(stderr, "error: floating-point values are not supported by the nvm backend\n");
         std::exit(1);
     }
+    if (auto* n = std::get_if<ast::BoolExpr>(&expr.node)) {
+        emitPush(n->value ? 1 : 0);
+        return;
+    }
     if (auto* n = std::get_if<ast::StringExpr>(&expr.node)) {
         materializeString(n->value);
         return;

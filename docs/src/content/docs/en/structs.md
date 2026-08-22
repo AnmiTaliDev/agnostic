@@ -98,21 +98,19 @@ stdio.PrintlnStr(p.second)
 ```
 
 The compiler predefines two generic structs, always in scope without an import: `Result<T,E>`
-(`ok int`, `value T`, `err E`) and `Option<T>` (`some int`, `value T`) — used for functions where a
-plain `int` sentinel return isn't precise enough. Since the language has no boolean literals
-(booleans are represented as `int` 0/1 everywhere, matching the rest of the standard library),
-`ok`/`some` are `int`, not `bool`.
+(`ok bool`, `value T`, `err E`) and `Option<T>` (`some bool`, `value T`) — used for functions where a
+plain `int` sentinel return isn't precise enough.
 
 ```agn
 func safeDivide(a int, b int) Result<int,string> {
     if b == 0 {
-        return Result<int,string>{ok: 0, value: 0, err: "divide by zero"}
+        return Result<int,string>{ok: false, value: 0, err: "divide by zero"}
     }
-    return Result<int,string>{ok: 1, value: a / b, err: ""}
+    return Result<int,string>{ok: true, value: a / b, err: ""}
 }
 
 var r Result<int,string> = safeDivide(10, 0)
-if r.ok == 0 {
+if !r.ok {
     stdio.PrintlnStr(r.err)
 }
 ```

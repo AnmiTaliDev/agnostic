@@ -94,6 +94,9 @@ Token Lexer::readIdentifier() {
         advance();
     }
 
+    if (id == "true") return Token{TokenKind::BoolLiteral, "", 1};
+    if (id == "false") return Token{TokenKind::BoolLiteral, "", 0};
+
     auto it = keywords.find(id);
     if (it != keywords.end()) return Token{it->second, "", 0};
     return Token{TokenKind::Identifier, id, 0};
@@ -143,6 +146,7 @@ const char* tokenKindName(TokenKind kind) {
         case TokenKind::Identifier: return "identifier";
         case TokenKind::Number: return "number";
         case TokenKind::Float: return "float";
+        case TokenKind::BoolLiteral: return "bool literal";
         case TokenKind::String: return "string";
         case TokenKind::Plus: return "+";
         case TokenKind::Minus: return "-";

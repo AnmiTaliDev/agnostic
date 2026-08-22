@@ -98,21 +98,19 @@ stdio.PrintlnStr(p.second)
 ```
 
 Компилятор предопределяет две обобщённые структуры, всегда доступные без импорта:
-`Result<T,E>` (`ok int`, `value T`, `err E`) и `Option<T>` (`some int`, `value T`) — для функций,
-которым недостаточно точности простого `int`-сентинела. Поскольку в языке нет булевых литералов
-(булевость везде выражается через `int` 0/1, как и в остальной стандартной библиотеке), `ok`/`some`
-имеют тип `int`, а не `bool`.
+`Result<T,E>` (`ok bool`, `value T`, `err E`) и `Option<T>` (`some bool`, `value T`) — для функций,
+которым недостаточно точности простого `int`-сентинела.
 
 ```agn
 func safeDivide(a int, b int) Result<int,string> {
     if b == 0 {
-        return Result<int,string>{ok: 0, value: 0, err: "divide by zero"}
+        return Result<int,string>{ok: false, value: 0, err: "divide by zero"}
     }
-    return Result<int,string>{ok: 1, value: a / b, err: ""}
+    return Result<int,string>{ok: true, value: a / b, err: ""}
 }
 
 var r Result<int,string> = safeDivide(10, 0)
-if r.ok == 0 {
+if !r.ok {
     stdio.PrintlnStr(r.err)
 }
 ```

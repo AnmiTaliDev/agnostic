@@ -693,8 +693,7 @@ struct GccBackend::Impl {
         Type retType = checker.functions().at(qualifiedFnName).returnType;
         auto* structGcc = structTypes.at(retType.structName);
         auto* tmp = gcc_jit_function_new_local(curFn, loc, gcc_jit_struct_as_type(structGcc), "opt_wrap");
-        auto* cmp = gcc_jit_context_new_comparison(ctxt, loc, GCC_JIT_COMPARISON_GE, rawValue, constI64(0));
-        auto* someFlag = toI64(TypedValue{cmp, Type{TypeKind::Bool}});
+        auto* someFlag = gcc_jit_context_new_comparison(ctxt, loc, GCC_JIT_COMPARISON_GE, rawValue, constI64(0));
         auto* someField = gcc_jit_struct_get_field(structGcc, 0);
         auto* valueField = gcc_jit_struct_get_field(structGcc, 1);
         gcc_jit_block_add_assignment(curBlock, loc, gcc_jit_lvalue_access_field(tmp, loc, someField), someFlag);
@@ -722,19 +721,19 @@ struct GccBackend::Impl {
                                   "string.indexOf");
         }
         if (member == "contains") {
-            return TypedValue{callRt("agn_rt_contains", i64Ty, {ptrTy, ptrTy},
-                                      {genExpr(args[0]).value, genExpr(args[1]).value}),
-                               Type{TypeKind::I64}};
+            auto* call = callRt("agn_rt_contains", i64Ty, {ptrTy, ptrTy},
+                                 {genExpr(args[0]).value, genExpr(args[1]).value});
+            return TypedValue{coerceValue({call, Type{TypeKind::I64}}, Type{TypeKind::Bool}), Type{TypeKind::Bool}};
         }
         if (member == "startsWith") {
-            return TypedValue{callRt("agn_rt_starts_with", i64Ty, {ptrTy, ptrTy},
-                                      {genExpr(args[0]).value, genExpr(args[1]).value}),
-                               Type{TypeKind::I64}};
+            auto* call = callRt("agn_rt_starts_with", i64Ty, {ptrTy, ptrTy},
+                                 {genExpr(args[0]).value, genExpr(args[1]).value});
+            return TypedValue{coerceValue({call, Type{TypeKind::I64}}, Type{TypeKind::Bool}), Type{TypeKind::Bool}};
         }
         if (member == "endsWith") {
-            return TypedValue{callRt("agn_rt_ends_with", i64Ty, {ptrTy, ptrTy},
-                                      {genExpr(args[0]).value, genExpr(args[1]).value}),
-                               Type{TypeKind::I64}};
+            auto* call = callRt("agn_rt_ends_with", i64Ty, {ptrTy, ptrTy},
+                                 {genExpr(args[0]).value, genExpr(args[1]).value});
+            return TypedValue{coerceValue({call, Type{TypeKind::I64}}, Type{TypeKind::Bool}), Type{TypeKind::Bool}};
         }
         if (member == "charAt") {
             return wrapOptionInt(callRt("agn_rt_char_at", i64Ty, {ptrTy, i64Ty},
@@ -879,6 +878,9 @@ struct GccBackend::Impl {
         }
         if (auto* n = std::get_if<ast::FloatExpr>(&expr.node)) {
             return TypedValue{gcc_jit_context_new_rvalue_from_double(ctxt, doubleTy, n->value), Type{TypeKind::F64}};
+        }
+        if (auto* n = std::get_if<ast::BoolExpr>(&expr.node)) {
+            return TypedValue{gcc_jit_context_new_rvalue_from_int(ctxt, boolTy, n->value ? 1 : 0), Type{TypeKind::Bool}};
         }
         if (auto* n = std::get_if<ast::StringExpr>(&expr.node)) {
             return TypedValue{getStringLiteral(n->value), Type{TypeKind::String}};

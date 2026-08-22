@@ -1,12 +1,12 @@
 package result
 
 struct Result<T, E> {
-    ok int
+    ok bool
     value T
     err E
 }
 
 struct Option<T> {
-    some int
+    some bool
     value T
 }

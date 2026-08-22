@@ -7,7 +7,7 @@ description: result, stdio, math, string, os и novaria.
 
 ## result
 
-`stdlib/result.agn` объявляет `Result<T,E>` (`ok int`, `value T`, `err E`) и `Option<T>` (`some int`, `value T`). В отличие от всех остальных модулей здесь, эти две обобщённые структуры всегда в области видимости — `import "result"` не нужен, а их поля — настоящие данные, а не тело, генерируемое компилятором: компилятор парсит этот файл напрямую и вливает его объявления в каждую компилируемую программу. Как работает инстанцирование (`Result<int,string>`) и монолиформизация — см. [Обобщённые структуры](/ru/structs/#обобщённые-структуры-дженерики).
+`stdlib/result.agn` объявляет `Result<T,E>` (`ok bool`, `value T`, `err E`) и `Option<T>` (`some bool`, `value T`). В отличие от всех остальных модулей здесь, эти две обобщённые структуры всегда в области видимости — `import "result"` не нужен, а их поля — настоящие данные, а не тело, генерируемое компилятором: компилятор парсит этот файл напрямую и вливает его объявления в каждую компилируемую программу. Как работает инстанцирование (`Result<int,string>`) и монолиформизация — см. [Обобщённые структуры](/ru/structs/#обобщённые-структуры-дженерики).
 
 ## stdio
 
@@ -29,7 +29,7 @@ description: result, stdio, math, string, os и novaria.
 
 ## math
 
-Все функции принимают и возвращают `int`.
+Все функции принимают `int`; большинство и возвращают `int`, кроме `IsEven`/`IsOdd`/`IsPrime`, которые возвращают `bool`.
 
 | Функция | Сигнатура | Примечания |
 |---|---|---|
@@ -40,12 +40,12 @@ description: result, stdio, math, string, os и novaria.
 | `GCD` | `(a int, b int) int` | алгоритм Евклида, только положительный вход |
 | `LCM` | `(a int, b int) int` | только положительный вход |
 | `Fact` | `(n int) int` | факториал |
-| `IsEven` | `(n int) int` | 1 или 0 |
-| `IsOdd` | `(n int) int` | 1 или 0 |
+| `IsEven` | `(n int) bool` | |
+| `IsOdd` | `(n int) bool` | |
 | `Sign` | `(x int) int` | 1, если `x > 0`, иначе 0; отрицательные значения не отличаются от нуля |
 | `Clamp` | `(value int, min int, max int) int` | |
 | `SumRange` | `(n int) int` | сумма `1..n` |
-| `IsPrime` | `(n int) int` | пробное деление, 1 или 0 |
+| `IsPrime` | `(n int) bool` | пробное деление |
 | `Fib` | `(n int) int` | n-е число Фибоначчи, итеративно |
 
 ## string
@@ -55,12 +55,12 @@ description: result, stdio, math, string, os и novaria.
 | `len` | `(s string) int` | длина в байтах |
 | `compare` | `(s1 string, s2 string) int` | 0, если равны, -1, если `s1 < s2`, 1, если `s1 > s2` |
 | `concat` | `(s1 string, s2 string) string` | |
-| `is_empty` | `(s string) int` | 1 или 0 |
-| `indexOf` | `(s string, sub string) Option<int>` | индекс первого вхождения `sub`; `some=0`, если не найдено |
-| `contains` | `(s string, sub string) int` | 1 или 0 |
-| `startsWith` | `(s string, prefix string) int` | 1 или 0 |
-| `endsWith` | `(s string, suffix string) int` | 1 или 0 |
-| `charAt` | `(s string, index int) Option<int>` | код байта по `index`; `some=0`, если вне границ |
+| `is_empty` | `(s string) bool` | |
+| `indexOf` | `(s string, sub string) Option<int>` | индекс первого вхождения `sub`; `some=false`, если не найдено |
+| `contains` | `(s string, sub string) bool` | |
+| `startsWith` | `(s string, prefix string) bool` | |
+| `endsWith` | `(s string, suffix string) bool` | |
+| `charAt` | `(s string, index int) Option<int>` | код байта по `index`; `some=false`, если вне границ |
 | `substr` | `(s string, start int, len int) string` | обрезается по границам строки |
 | `toUpper` | `(s string) string` | только ASCII |
 | `toLower` | `(s string) string` | только ASCII |
@@ -75,16 +75,16 @@ description: result, stdio, math, string, os и novaria.
 |---|---|---|
 | `ArgCount` | `() int` | число аргументов командной строки, включая argv[0] (путь к программе) |
 | `Arg` | `(index int) string` | аргумент по `index` |
-| `OpenRead` | `(path string) Option<int>` | value — файловый дескриптор; `some=0` при ошибке |
-| `OpenCreate` | `(path string) Option<int>` | создать/обрезать для записи; value — дескриптор, `some=0` при ошибке |
+| `OpenRead` | `(path string) Option<int>` | value — файловый дескриптор; `some=false` при ошибке |
+| `OpenCreate` | `(path string) Option<int>` | создать/обрезать для записи; value — дескриптор, `some=false` при ошибке |
 | `Close` | `(fd int) int` | |
-| `ReadFd` | `(fd int, buffer int, maxlen int) Option<int>` | читает в адрес буфера в куче, как `stdio.ReadLine`; value — число прочитанных байт, `some=0` при ошибке |
-| `WriteFd` | `(fd int, data string) Option<int>` | value — число записанных байт, `some=0` при ошибке |
+| `ReadFd` | `(fd int, buffer int, maxlen int) Option<int>` | читает в адрес буфера в куче, как `stdio.ReadLine`; value — число прочитанных байт, `some=false` при ошибке |
+| `WriteFd` | `(fd int, data string) Option<int>` | value — число записанных байт, `some=false` при ошибке |
 | `Exit` | `(code int)` | немедленно завершает процесс, не выполняя оставшийся код вызывающей функции |
 
 Параметр `buffer` у `ReadFd` (и у `stdio.ReadLine`) типизирован как `int`, но принимает указатель, полученный через `&arr`, напрямую — значение-указатель, присваиваемое параметру `int`, приводится к своему адресу.
 
-`OpenRead`, `OpenCreate`, `ReadFd` и `WriteFd` возвращают `Option<int>` (см. [Обобщённые структуры](/ru/structs/#обобщённые-структуры-дженерики)) вместо сырого сентинела: `some` равен 1 при успехе и 0 при ошибке, а `value` содержит дескриптор или число байт только когда `some` равен 1 — проверяйте `some` перед тем, как доверять `value`.
+`OpenRead`, `OpenCreate`, `ReadFd` и `WriteFd` возвращают `Option<int>` (см. [Обобщённые структуры](/ru/structs/#обобщённые-структуры-дженерики)) вместо сырого сентинела: `some` равен `true` при успехе и `false` при ошибке, а `value` содержит дескриптор или число байт только когда `some` равен `true` — проверяйте `some` перед тем, как доверять `value`.
 
 ## novaria
 
