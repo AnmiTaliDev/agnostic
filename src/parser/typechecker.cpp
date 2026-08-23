@@ -209,6 +209,7 @@ static std::string functionKey(const ast::Function& f) {
 }
 
 bool TypeChecker::checkProgram(ast::Program& program) {
+    program_ = &program;
     for (auto& s : program.structs) structs_[s.name] = {};
     for (auto& s : program.structs) registerStruct(s);
 
@@ -233,6 +234,7 @@ bool TypeChecker::checkProgram(ast::Program& program) {
 void TypeChecker::checkFunctionBody(ast::Function& func, const std::string& key, const std::string& modulePrefix) {
     currentFunction_ = key;
     currentModulePrefix_ = modulePrefix;
+    comptimeEval_.reset();
     scopeStack_.clear();
     scopeStack_.push_back(ScopeFrame{});
 
@@ -250,59 +252,41 @@ void TypeChecker::checkFunctionBody(ast::Function& func, const std::string& key,
 }
 
 void TypeChecker::checkComptimeBody(std::vector<ast::Statement>& body) {
+    if (!comptimeEval_) comptimeEval_ = std::make_unique<ComptimeEvaluator>(*program_, targetOs_, targetArch_, memMode_);
+
     std::vector<ast::Statement> result;
     for (auto& stmt : body) {
         if (auto* ifs = std::get_if<ast::IfStmt>(&stmt.node)) {
-            auto val = evalComptimeCondition(ifs->condition);
-            if (!val) {
-                addError("comptime condition must be a compile-time constant");
+            comptimeEval_->clearError();
+            auto val = comptimeEval_->eval(ifs->condition);
+            if (!val || val->kind != ComptimeValue::Kind::Bool) {
+                addError("comptime condition must be a compile-time constant" +
+                          (comptimeEval_->lastError().empty() ? std::string() : ": " + comptimeEval_->lastError()));
+                comptimeEval_->clearError();
                 continue;
             }
             std::vector<ast::Statement> empty;
-            std::vector<ast::Statement>* branch = *val ? &ifs->thenBody : (ifs->elseBody ? &*ifs->elseBody : &empty);
+            std::vector<ast::Statement>* branch = val->b ? &ifs->thenBody : (ifs->elseBody ? &*ifs->elseBody : &empty);
             checkComptimeBody(*branch);
             for (auto& s : *branch) result.push_back(std::move(s));
-        } else {
-            checkStatement(stmt);
-            result.push_back(std::move(stmt));
+            continue;
         }
+
+        bool interpretable = std::get_if<ast::VarDeclStmt>(&stmt.node) || std::get_if<ast::AssignmentStmt>(&stmt.node) ||
+                              std::get_if<ast::ForStmt>(&stmt.node) || std::get_if<ast::ExpressionStmt>(&stmt.node) ||
+                              std::get_if<ast::ComptimeStmt>(&stmt.node);
+        if (interpretable) {
+            comptimeEval_->clearError();
+            comptimeEval_->execStatement(stmt);
+            bool consumed = comptimeEval_->lastError().empty();
+            comptimeEval_->clearError();
+            if (consumed) continue;
+        }
+
+        checkStatement(stmt);
+        result.push_back(std::move(stmt));
     }
     body = std::move(result);
-}
-
-std::optional<std::string> TypeChecker::evalComptimeConstant(const ast::Expression& expr) {
-    if (auto* id = std::get_if<ast::IdentifierExpr>(&expr.node)) {
-        if (id->name == "TARGET_OS") return targetOs_;
-        if (id->name == "TARGET_ARCH") return targetArch_;
-        if (id->name == "MEM_MODE") return memMode_;
-        return std::nullopt;
-    }
-    if (auto* str = std::get_if<ast::StringExpr>(&expr.node)) return str->value;
-    return std::nullopt;
-}
-
-std::optional<bool> TypeChecker::evalComptimeCondition(const ast::Expression& expr) {
-    if (auto* bin = std::get_if<ast::BinaryExpr>(&expr.node)) {
-        if (bin->op == ast::BinaryOp::And || bin->op == ast::BinaryOp::Or) {
-            auto l = evalComptimeCondition(*bin->left);
-            auto r = evalComptimeCondition(*bin->right);
-            if (!l || !r) return std::nullopt;
-            return bin->op == ast::BinaryOp::And ? (*l && *r) : (*l || *r);
-        }
-        if (bin->op == ast::BinaryOp::Equal || bin->op == ast::BinaryOp::NotEqual) {
-            auto l = evalComptimeConstant(*bin->left);
-            auto r = evalComptimeConstant(*bin->right);
-            if (!l || !r) return std::nullopt;
-            bool eq = (*l == *r);
-            return bin->op == ast::BinaryOp::Equal ? eq : !eq;
-        }
-        return std::nullopt;
-    }
-    if (auto* un = std::get_if<ast::UnaryExpr>(&expr.node); un && un->op == ast::UnaryOp::Not) {
-        auto v = evalComptimeCondition(*un->operand);
-        return v ? std::optional<bool>(!*v) : std::nullopt;
-    }
-    return std::nullopt;
 }
 
 void TypeChecker::checkStatement(ast::Statement& stmt) {
@@ -464,6 +448,16 @@ Type TypeChecker::checkExpression(ast::Expression& expr) {
     }
 
     if (auto* n = std::get_if<ast::IdentifierExpr>(&expr.node)) {
+        if (comptimeEval_ && comptimeEval_->hasGlobal(n->name)) {
+            ComptimeValue v = *comptimeEval_->lookupGlobal(n->name);
+            switch (v.kind) {
+                case ComptimeValue::Kind::I64: expr.node = ast::NumberExpr{v.i}; return Type{TypeKind::I64};
+                case ComptimeValue::Kind::F64: expr.node = ast::FloatExpr{v.f}; return Type{TypeKind::F64};
+                case ComptimeValue::Kind::Bool: expr.node = ast::BoolExpr{v.b}; return Type{TypeKind::Bool};
+                case ComptimeValue::Kind::String: expr.node = ast::StringExpr{v.s}; return Type{TypeKind::String};
+                case ComptimeValue::Kind::Void: break;
+            }
+        }
         if (auto v = lookupVar(n->name)) return *v;
         auto it = functions_.find(n->name);
         if (it != functions_.end() && !it->second.receiver) {

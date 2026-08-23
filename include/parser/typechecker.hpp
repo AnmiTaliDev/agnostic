@@ -3,6 +3,7 @@
 #pragma once
 
 #include "ast/ast.hpp"
+#include "parser/comptime_eval.hpp"
 
 #include <memory>
 #include <optional>
@@ -82,9 +83,6 @@ private:
     std::optional<Type> lookupVar(const std::string& name);
     void declareVar(const std::string& name, const Type& type);
 
-    std::optional<bool> evalComptimeCondition(const ast::Expression& cond);
-    std::optional<std::string> evalComptimeConstant(const ast::Expression& expr);
-
     void addError(const std::string& message);
     std::string didYouMean(const std::string& name, const std::vector<std::string>& candidates) const;
     std::vector<std::string> visibleVarNames() const;
@@ -107,6 +105,9 @@ private:
     std::string targetOs_;
     std::string targetArch_;
     std::string memMode_;
+
+    ast::Program* program_ = nullptr;
+    std::unique_ptr<ComptimeEvaluator> comptimeEval_;
 };
 
 } // namespace agn::parser

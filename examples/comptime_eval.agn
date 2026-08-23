@@ -1,0 +1,39 @@
+package main
+
+import "stdio"
+
+func fib(n int) int {
+    if n < 2 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+func main() {
+    comptime {
+        var fibResult int = fib(10)
+    }
+    stdio.Println(fibResult)
+
+    comptime {
+        var sum int = 0
+        var i int = 0
+        for i < 5 {
+            sum = sum + i
+            i = i + 1
+        }
+        var loopResult int = sum
+    }
+    stdio.Println(loopResult)
+
+    comptime {
+        var combined bool = (1 + 1 == 2) && TARGET_OS == "linux"
+    }
+    if combined {
+        stdio.PrintlnStr("combined true")
+    } else {
+        stdio.PrintlnStr("combined false")
+    }
+
+    return
+}
